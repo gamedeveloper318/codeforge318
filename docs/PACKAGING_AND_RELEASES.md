@@ -19,11 +19,22 @@ It also writes the version, size and SHA-256 to `brand/release-manifest.json`, a
 
 Configuration lives in `desktop/electron-builder.yml`. Native terminal binaries are unpacked from the asar archive; `npmRebuild` is off because node-pty ships prebuilt N-API binaries.
 
-### Verified for 0.1.0
+### Verified
 
-- Installer built: `CodeForge-Setup-0.1.0-x64.exe`, 119.9 MB, SHA-256 `bc216888b0e61bf3c3e1024832e113921835ce187a8d528bc53764dab422ef7c`.
-- Silent install (`/S`) to the default location, end-to-end tests against the **installed** `CodeForge.exe` (11/11 passed), silent uninstall removed files, registry entry and shortcuts.
+- The installer has been installed silently (`/S`) to the default location, the end-to-end tests passed against the **installed** `CodeForge.exe`, and a silent uninstall removed the files, registry entry and shortcuts.
+- The size and SHA-256 of the currently published installer are in `brand/release-manifest.json`, on the website's download page and in the GitHub Release notes.
 - Known: installing into a folder whose path is longer than ~140 characters can exceed Windows' 248-character folder limit and skip the terminal binaries. The default location is far below that.
+
+## Automated releases (recommended)
+
+`.github/workflows/release-windows.yml` publishes a release when a version tag is pushed. Bump `version` in `desktop/package.json` (and `desktop/package-lock.json`), add the notes to `website/src/lib/releases.ts`, commit, then:
+
+```bash
+git tag -a v0.1.1 -m "CodeForge 0.1.1"
+git push origin master v0.1.1
+```
+
+On a Windows runner the workflow checks that the tag matches the app version, runs the typecheck, unit tests, packaging and the end-to-end tests against the packaged app, publishes the GitHub Release (installer + `SHA256SUMS.txt`), and commits the new size and SHA-256 to `brand/release-manifest.json` and the website. That commit redeploys the website on Vercel, which then shows the download button. No secrets are needed; it uses the repository's built-in `GITHUB_TOKEN`.
 
 ## Code signing (recommended before wide distribution)
 

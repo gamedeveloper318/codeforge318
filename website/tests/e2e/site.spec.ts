@@ -1,4 +1,9 @@
+import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+
+const manifest = JSON.parse(
+  readFileSync(new URL("../../src/generated/release-manifest.json", import.meta.url), "utf8"),
+) as { version: string };
 
 test("homepage shows the brand, tagline and a download path", async ({ page }) => {
   await page.goto("/");
@@ -16,7 +21,7 @@ test("homepage shows the brand, tagline and a download path", async ({ page }) =
   const href = await download.getAttribute("href");
   // Either a verified installer URL or the download page — never a dead link.
   expect(href === "/download" || href?.startsWith("https://")).toBe(true);
-  await expect(page.getByTestId("availability")).toContainText("0.1.0");
+  await expect(page.getByTestId("availability")).toContainText(manifest.version);
 });
 
 test("every main page loads", async ({ page }) => {

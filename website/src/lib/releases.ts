@@ -11,7 +11,7 @@ export interface ReleaseNote {
 /** Human-written release notes, newest first. */
 export const RELEASES: ReleaseNote[] = [
   {
-    version: "0.1.0",
+    version: "0.1.1",
     date: "2026-10-30",
     title: "First public preview",
     summary:
@@ -21,7 +21,7 @@ export const RELEASES: ReleaseNote[] = [
       "Syntax highlighting for 70+ file types; completion, diagnostics, hover and formatting for TypeScript, JavaScript, JSON, CSS, SCSS, Less and HTML.",
       "File explorer: create (including nested paths), rename, drag-and-drop move, delete to the Recycle Bin, reveal in File Explorer, copy path, Git status colors.",
       "Integrated terminal backed by real shell processes (ConPTY on Windows) with multiple sessions, resizing, copy/paste and a configurable shell.",
-      "Source control: initialize, stage, unstage, discard, side-by-side diffs, commit, branch switching and creation, pull, push and fetch using your installed Git.",
+      "Source control: initialize, stage, unstage, discard, side-by-side diffs, commit, branch switching and creation, pull, push and fetch using your installed Git — including folders opened through junctions, symbolic links, subst drives or short (8.3) paths.",
       "Project-wide search with case, whole-word and regular-expression options plus include/exclude filters.",
       "Command Palette, Go to File, Go to Line, keyboard shortcuts and a custom title-bar menu.",
       "Run the active file (Node.js, Python, PowerShell and more) or npm scripts in a terminal, and preview HTML files or localhost servers in a sandboxed window.",

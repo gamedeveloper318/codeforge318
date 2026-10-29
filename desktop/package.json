@@ -1,8 +1,8 @@
 {
   "name": "codeforge-desktop",
   "productName": "CodeForge",
-  "version": "0.1.0",
-  "description": "CodeForge \u2014 a desktop code editor. Your Code. Your Workspace. Your Power.",
+  "version": "0.1.1",
+  "description": "CodeForge — a desktop code editor. Your Code. Your Workspace. Your Power.",
   "author": "CodeForge",
   "private": true,
   "main": "out/main/index.js",
