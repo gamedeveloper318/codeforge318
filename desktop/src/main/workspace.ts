@@ -33,6 +33,18 @@ export class Workspace {
     return this.rootPath;
   }
 
+  /**
+   * Converts a fully resolved path (symlinks, junctions and 8.3 short names
+   * expanded — as Git reports paths) into the spelling the folder was opened
+   * with, so it matches the paths shown in the explorer and editor tabs.
+   */
+  fromRealPath(realPath: string): string {
+    if (this.rootPath && this.rootReal && isInside(this.rootReal, realPath)) {
+      return path.join(this.rootPath, path.relative(this.rootReal, realPath));
+    }
+    return realPath;
+  }
+
   get info(): WorkspaceInfo | null {
     if (!this.rootPath) return null;
     return { root: this.rootPath, name: path.basename(this.rootPath) || this.rootPath };

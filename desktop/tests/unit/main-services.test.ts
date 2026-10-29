@@ -303,4 +303,24 @@ describe.skipIf(!gitAvailable)("GitService (real git)", () => {
     await service.init();
     await expect(service.stage([path.join(outside, "secret.txt")])).rejects.toThrow(/outside/);
   });
+
+  it("works when the folder is opened through a junction or short path", async () => {
+    // Git reports fully resolved paths, while the folder was opened through
+    // another spelling (here a junction; on CI machines an 8.3 short name).
+    const alias = path.join(path.dirname(root), "alias");
+    symlinkSync(root, alias, "junction");
+    const aliased = new Workspace({ onFilesChanged: () => {}, onGitChanged: () => {} });
+    await aliased.open(alias);
+    try {
+      const service = new GitService(aliased);
+      await service.init();
+      const file = path.join(alias, "src", "app.ts");
+      expect((await service.status()).unstaged.map((c) => c.absolutePath)).toEqual([file]);
+      await service.stage([file]);
+      expect((await service.status()).staged.map((c) => c.absolutePath)).toEqual([file]);
+      expect(await service.show(file, "INDEX")).toContain("hello");
+    } finally {
+      aliased.close();
+    }
+  });
 });

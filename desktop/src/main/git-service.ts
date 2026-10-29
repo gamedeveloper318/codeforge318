@@ -4,6 +4,7 @@ import { shell } from "electron";
 import { parseGitStatus, type GitChange } from "@shared/git-status";
 import type { GitBranches, GitCommit, GitFileChange, GitStatusResponse } from "@shared/ipc";
 import { childProcessEnv } from "./env";
+import { realpathOfExisting } from "./path-guard";
 import type { Workspace } from "./workspace";
 
 /**
@@ -78,7 +79,10 @@ export class GitService {
     const root = this.workspace.root;
     if (!root || !(await this.isAvailable())) return null;
     try {
-      return path.resolve((await runGit(["rev-parse", "--show-toplevel"], root)).trim());
+      // Git reports the fully resolved path; normalise it the same way as ours.
+      return await realpathOfExisting(
+        path.resolve((await runGit(["rev-parse", "--show-toplevel"], root)).trim()),
+      );
     } catch {
       return null;
     }
@@ -95,7 +99,9 @@ export class GitService {
   private async toRepoPaths(repo: string, paths: string[]): Promise<string[]> {
     const result: string[] = [];
     for (const p of paths) {
-      const resolved = await this.workspace.resolve(p);
+      // Compare resolved paths: the folder may have been opened through a
+      // junction, symlink or 8.3 short name that Git reports differently.
+      const resolved = await realpathOfExisting(await this.workspace.resolve(p));
       const relative = path.relative(repo, resolved);
       if (relative.startsWith("..") || path.isAbsolute(relative)) {
         throw new Error("That file is outside the Git repository.");
@@ -128,9 +134,10 @@ export class GitService {
     );
     const parsed = parseGitStatus(output);
     const withAbsolute = (changes: GitChange[]): GitFileChange[] =>
-      changes
-        .slice(0, 5000)
-        .map((change) => ({ ...change, absolutePath: path.join(repo, ...change.path.split("/")) }));
+      changes.slice(0, 5000).map((change) => ({
+        ...change,
+        absolutePath: this.workspace.fromRealPath(path.join(repo, ...change.path.split("/"))),
+      }));
     return {
       ...base,
       isRepo: true,
