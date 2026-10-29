@@ -1,0 +1,98 @@
+# Builds, tests and publishes the Windows installer as a GitHub Release.
+# Triggered by pushing a version tag:  git tag v0.1.0 && git push origin v0.1.0
+# Uses GitHub's built-in token for this repository; no secrets are needed.
+name: Release Windows installer
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    env:
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Check the tag matches the app version
+        run: |
+          version="v$(node -p "require('./desktop/package.json').version")"
+          if [ "$version" != "$TAG" ]; then
+            echo "::error::Tag $TAG does not match desktop/package.json ($version)."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        working-directory: desktop
+        run: |
+          npm ci --no-audit --no-fund
+          node node_modules/electron/install.js
+
+      - name: Typecheck and unit tests
+        working-directory: desktop
+        run: |
+          npm run typecheck
+          npm test
+
+      - name: Build the installer
+        working-directory: desktop
+        run: npm run package:win
+
+      - name: Test the packaged app end to end
+        working-directory: desktop
+        env:
+          CODEFORGE_E2E_EXECUTABLE: release/win-unpacked/CodeForge.exe
+        run: npx playwright test --retries=1
+
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          installer="desktop/release/CodeForge-Setup-${TAG#v}-x64.exe"
+          sha256=$(cut -d' ' -f1 desktop/release/SHA256SUMS.txt | head -1)
+          notes=$(printf '%s\n' \
+            "Windows installer for CodeForge ${TAG#v} (Windows 10 1809+ / Windows 11, 64-bit)." \
+            "" \
+            "**SHA-256:** \`$sha256\`" \
+            "" \
+            "The installer is not code-signed yet, so Windows SmartScreen may warn on first run: choose *More info, then Run anyway*." \
+            "" \
+            "Release notes: https://codeforge318.vercel.app/releases")
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "$installer" desktop/release/SHA256SUMS.txt --clobber
+          else
+            gh release create "$TAG" "$installer" desktop/release/SHA256SUMS.txt \
+              --title "CodeForge ${TAG#v}" --notes "$notes" --verify-tag
+          fi
+
+      - name: Record the installer checksum for the website
+        run: |
+          node scripts/sync-brand.mjs
+          git add brand/release-manifest.json website/src/generated/release-manifest.json
+          if git diff --cached --quiet; then
+            echo "Checksum record already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Record size and SHA-256 of the $TAG Windows installer"
+          git push origin HEAD:master
