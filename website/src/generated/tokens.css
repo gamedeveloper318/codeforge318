@@ -1,0 +1,29 @@
+/*
+ * CodeForge design tokens — the single source of truth for brand colors,
+ * radii and type. Copied into each app by `npm run sync:brand`; edit here.
+ */
+:root {
+  --cf-bg: #070a13;
+  --cf-bg-elevated: #0a0f1c;
+  --cf-surface: #0f1729;
+  --cf-surface-2: #141e34;
+  --cf-surface-3: #1a2540;
+  --cf-border: rgba(148, 163, 184, 0.13);
+  --cf-border-strong: rgba(148, 163, 184, 0.24);
+  --cf-text: #e6edf7;
+  --cf-text-muted: #94a3b8;
+  --cf-text-subtle: #64748b;
+  --cf-cyan: #22d3ee;
+  --cf-blue: #3b82f6;
+  --cf-violet: #8b5cf6;
+  --cf-success: #34d399;
+  --cf-warning: #fbbf24;
+  --cf-danger: #f87171;
+  --cf-gradient: linear-gradient(135deg, #22d3ee 0%, #3b82f6 50%, #8b5cf6 100%);
+  --cf-radius-sm: 6px;
+  --cf-radius: 10px;
+  --cf-radius-lg: 16px;
+  --cf-font-sans: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --cf-font-mono:
+    "JetBrains Mono", "Cascadia Code", "Cascadia Mono", Consolas, "Courier New", monospace;
+}

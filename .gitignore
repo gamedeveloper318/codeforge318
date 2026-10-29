@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build output
+website/.next/
+website/out/
+website/next-env.d.ts
+website/*.tsbuildinfo
+desktop/out/
+desktop/release/
+desktop/*.tsbuildinfo
+
+# Test output
+**/test-results/
+**/playwright-report/
+**/blob-report/
+**/.vitest-cache/
+
+# Environment files (secrets never go in git; .env.example is the documented template)
+.env
+.env.*
+!.env.example
+.vercel/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*

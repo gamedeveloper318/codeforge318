@@ -1,0 +1,53 @@
+# electron-builder configuration — produces the CodeForge installers.
+# Windows: `npm run package:win` -> release/CodeForge-Setup-<version>-x64.exe
+appId: dev.codeforge.desktop
+productName: CodeForge
+copyright: Copyright © 2026 CodeForge
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+  - "!**/*.pdb"
+  - "!**/*.map"
+# The terminal's native module and its ConPTY helpers must live outside the
+# asar archive so Windows can load and execute them.
+asarUnpack:
+  - "**/node_modules/@lydell/node-pty-*/**"
+# node-pty ships prebuilt N-API binaries, so nothing needs compiling.
+npmRebuild: false
+nodeGypRebuild: false
+buildDependenciesFromSource: false
+publish: null
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+  artifactName: ${productName}-Setup-${version}-${arch}.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: CodeForge
+  uninstallDisplayName: CodeForge ${version}
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  deleteAppDataOnUninstall: false
+
+mac:
+  target: dmg
+  category: public.app-category.developer-tools
+  icon: build/icon.png
+  artifactName: ${productName}-${version}-${arch}.${ext}
+
+linux:
+  target: AppImage
+  category: Development
+  icon: build/icon.png
+  artifactName: ${productName}-${version}-${arch}.${ext}

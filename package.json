@@ -1,0 +1,24 @@
+{
+  "name": "codeforge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CodeForge — desktop code editor (desktop/) and website (website/).",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "sync:brand": "node scripts/sync-brand.mjs",
+    "dev:web": "npm --prefix website run dev",
+    "dev:desktop": "npm --prefix desktop run dev",
+    "build:web": "npm --prefix website run build",
+    "build:desktop": "npm --prefix desktop run build",
+    "test": "npm --prefix desktop test && npm --prefix website test",
+    "test:e2e": "npm --prefix desktop run test:e2e && npm --prefix website run test:e2e",
+    "verify": "node scripts/verify.mjs",
+    "package:win": "npm --prefix desktop run package:win && npm run sync:brand",
+    "deploy:web": "cd website && vercel deploy --prod",
+    "format": "prettier --write \"**/*.{ts,tsx,mjs,js,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,mjs,js,json,css,md}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10"
+  }
+}

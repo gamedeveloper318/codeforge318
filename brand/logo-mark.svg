@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <title>CodeForge</title>
+  <defs>
+    <linearGradient id="cf-bg" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#121B36"/>
+      <stop offset="1" stop-color="#070A13"/>
+    </linearGradient>
+    <linearGradient id="cf-stroke" x1="8" y1="8" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22D3EE"/>
+      <stop offset="0.55" stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="cf-flame" x1="64" y1="26" x2="64" y2="98" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8B5CF6"/>
+      <stop offset="0.5" stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+    <linearGradient id="cf-core" x1="64" y1="60" x2="64" y2="94" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A5F3FC"/>
+      <stop offset="1" stop-color="#FFFFFF"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#cf-bg)"/>
+  <rect x="5" y="5" width="118" height="118" rx="27" stroke="url(#cf-stroke)" stroke-opacity="0.55" stroke-width="2"/>
+  <path d="M40 42 L19 64 L40 86" stroke="url(#cf-stroke)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M88 42 L109 64 L88 86" stroke="url(#cf-stroke)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M64 26 C73 39 81 50 81 68 C81 85 73 98 64 98 C55 98 47 86 47 73 C47 63 51 56 56 50 C57 57 60 61 64 63 C61 51 59 39 64 26 Z" fill="url(#cf-flame)"/>
+  <path d="M64 61 C69 69 72 75 72 82 C72 89 68 93 64 93 C60 93 56 89 56 83 C56 76 60 70 64 61 Z" fill="url(#cf-core)"/>
+</svg>

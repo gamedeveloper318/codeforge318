@@ -1,0 +1,9 @@
+node_modules
+website/.next
+desktop/out
+desktop/release
+**/generated
+**/package-lock.json
+test-results
+playwright-report
+*.md

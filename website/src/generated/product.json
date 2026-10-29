@@ -1,0 +1,14 @@
+{
+  "name": "CodeForge",
+  "tagline": "Your Code. Your Workspace. Your Power.",
+  "description": "A fast, focused desktop code editor with Monaco-powered editing, a real integrated terminal, Git, project-wide search and a secure-by-default architecture.",
+  "shortDescription": "A fast, focused desktop code editor.",
+  "appId": "dev.codeforge.desktop",
+  "colors": {
+    "background": "#070A13",
+    "surface": "#0F1729",
+    "cyan": "#22D3EE",
+    "blue": "#3B82F6",
+    "violet": "#8B5CF6"
+  }
+}
