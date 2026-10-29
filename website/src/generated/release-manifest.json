@@ -7,8 +7,8 @@
       "arch": "x64",
       "kind": "installer",
       "file": "CodeForge-Setup-0.1.0-x64.exe",
-      "size": 125745446,
-      "sha256": "bc216888b0e61bf3c3e1024832e113921835ce187a8d528bc53764dab422ef7c"
+      "size": 125745511,
+      "sha256": "8a8e3988f907ef80225033d7e351b09bbbf5b91e72fdef5efcef934efe56cc63"
     }
   ]
 }

@@ -24,7 +24,25 @@ export interface DownloadOption extends ReleaseArtifact {
 
 export const releaseManifest = manifestJson as ReleaseManifest;
 
-/** Where an installer is published, or null when no host is configured. */
+/** The repository that hosts CodeForge's installers on GitHub Releases. */
+const CODEFORGE_REPO = "gamedeveloper318/codeforge318";
+
+/**
+ * The GitHub repository used for downloads when CODEFORGE_GITHUB_REPO is not
+ * set: the repository this Vercel deployment was built from (Vercel's system
+ * variables), otherwise CodeForge's own repository. Only applies to production
+ * builds, so tests and development stay explicit about their configuration.
+ */
+export function defaultReleaseRepo(
+  env: Record<string, string | undefined> = process.env,
+): string | null {
+  if (env.NODE_ENV !== "production") return null;
+  const owner = env.VERCEL_GIT_REPO_OWNER;
+  const slug = env.VERCEL_GIT_REPO_SLUG;
+  return owner && slug ? `${owner}/${slug}` : CODEFORGE_REPO;
+}
+
+/** Where an installer is published, or null when no host is known. */
 export function artifactUrl(
   manifest: ReleaseManifest,
   artifact: ReleaseArtifact,
@@ -32,8 +50,9 @@ export function artifactUrl(
 ): string | null {
   if (artifact.platform === "windows" && config.windowsDownloadUrl)
     return config.windowsDownloadUrl;
-  if (config.githubRepo) {
-    return `https://github.com/${config.githubRepo}/releases/download/v${manifest.version}/${encodeURIComponent(artifact.file)}`;
+  const repo = config.githubRepo ?? defaultReleaseRepo();
+  if (repo) {
+    return `https://github.com/${repo}/releases/download/v${manifest.version}/${encodeURIComponent(artifact.file)}`;
   }
   return null;
 }
