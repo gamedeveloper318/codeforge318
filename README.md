@@ -35,9 +35,9 @@ npm run dev:web        # run the website at http://localhost:3000
 
 ## What works today
 
-Editor tabs, saving and unsaved-change protection · find/replace, multi-cursor, folding · syntax highlighting for 70+ file types · TypeScript/JavaScript/JSON/CSS/HTML intelligence · file explorer (create, rename, move, delete to Recycle Bin) · real integrated terminals · Git (stage, diff, commit, branches, pull/push) · project search · Command Palette and Go to File · run files and npm scripts · sandboxed HTML/localhost preview · settings with dark and light themes · Windows installer.
+Editor tabs, saving and unsaved-change protection · find/replace, multi-cursor, folding · syntax highlighting for 70+ file types · Python IntelliSense (Pyright) · TypeScript/JavaScript/JSON/CSS/HTML intelligence · file explorer (create, rename, move, delete to Recycle Bin) · real integrated terminals · Git (stage, diff, commit, branches, pull/push) · project search · Command Palette and Go to File · run files and npm scripts · sandboxed HTML/localhost preview · settings with dark and light themes · Windows installer with automatic updates.
 
-Not yet: breakpoint debugging, language servers beyond the web stack, extensions, auto-update, signed installers, tested macOS/Linux builds. The full matrix is in [docs/FEATURES.md](docs/FEATURES.md).
+Not yet: breakpoint debugging, language servers for Go/Rust/Java/C#, extensions, signed installers, tested macOS/Linux builds. The full matrix is in [docs/FEATURES.md](docs/FEATURES.md).
 
 ## Documentation
 

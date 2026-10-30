@@ -106,8 +106,16 @@ export const DOCS: DocPage[] = [
         </ol>
         <h2>Update</h2>
         <p>
-          Automatic updates are not available yet. Download the newer installer and run it — it
-          replaces the old version and keeps your settings.
+          CodeForge 0.2.0 and later update themselves. When a new version is published, CodeForge
+          downloads it in the background and shows <strong>Restart Now</strong> /{" "}
+          <strong>Later</strong>; if you just quit, the update installs on exit. Use{" "}
+          <em>Help → Check for Updates…</em> to check right away, or turn automatic checks off in
+          Settings (<code>update.checkOnStartup</code>).
+        </p>
+        <p>
+          Coming from 0.1.1? That version has no updater: download the latest installer from the{" "}
+          <Link href="/download">download page</Link> once and run it — it replaces the old version
+          and keeps your settings.
         </p>
         <h2>Uninstall</h2>
         <p>
@@ -526,6 +534,13 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
           </thead>
           <tbody>
             <tr>
+              <td>Python</td>
+              <td>
+                Completion, type errors, hover info, signature help, go to definition, references,
+                rename (Pyright language server)
+              </td>
+            </tr>
+            <tr>
               <td>TypeScript, JavaScript</td>
               <td>Completion, errors, hover info, go to definition, rename, formatting</td>
             </tr>
@@ -555,8 +570,12 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
             untyped.
           </li>
           <li>
-            Language servers for Python, Go, Rust, Java, C# and others are planned but not included.
+            Python IntelliSense starts the first time you open a <code>.py</code> file. It works
+            with Python&apos;s standard library out of the box; to understand packages you installed
+            with pip, install Python and make sure <code>python</code> works in a terminal. Turn it
+            off with the <code>python.languageServer</code> setting.
           </li>
+          <li>Language servers for Go, Rust, Java, C# and others are planned but not included.</li>
         </ul>
       </>
     ),
@@ -672,6 +691,20 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
               </td>
               <td>13</td>
               <td>Terminal font size</td>
+            </tr>
+            <tr>
+              <td>
+                <code>python.languageServer</code>
+              </td>
+              <td>on</td>
+              <td>Python IntelliSense (Pyright)</td>
+            </tr>
+            <tr>
+              <td>
+                <code>update.checkOnStartup</code>
+              </td>
+              <td>on</td>
+              <td>Check for and download updates automatically</td>
             </tr>
           </tbody>
         </table>
@@ -892,6 +925,13 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
             confirmation.
           </li>
         </ul>
+        <h2>Updates</h2>
+        <p>
+          Automatic updates (from 0.2.0) are downloaded over HTTPS from this project&apos;s GitHub
+          Releases. Each download is checked against the SHA-512 recorded with the release before it
+          is installed, and CodeForge asks before restarting. You can turn automatic checks off in
+          Settings.
+        </p>
         <h2>Running code</h2>
         <p>
           CodeForge never runs code on its own. Commands run only when you type them in the terminal

@@ -1,6 +1,15 @@
-import { ArrowDown, ArrowUp, CircleX, GitBranch, RefreshCw, TriangleAlert } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  CircleArrowDown,
+  CircleX,
+  GitBranch,
+  RefreshCw,
+  TriangleAlert,
+} from "lucide-react";
 import { pickBranch, sync } from "../actions/git";
 import { showPanel } from "../actions/terminal";
+import { installUpdate } from "../actions/update";
 import { monaco } from "../monaco/setup";
 import { useStore } from "../state/store";
 
@@ -16,6 +25,7 @@ export function StatusBar() {
   const errors = useStore((s) => s.problems.filter((p) => p.severity === "error").length);
   const warnings = useStore((s) => s.problems.filter((p) => p.severity === "warning").length);
   const autoSave = useStore((s) => s.settings["files.autoSave"]);
+  const update = useStore((s) => s.updateStatus);
 
   return (
     <footer className="statusbar">
@@ -71,6 +81,23 @@ export function StatusBar() {
         </>
       )}
       {autoSave === "afterDelay" && <span className="status-item">Auto Save</span>}
+      {update?.state === "downloading" && (
+        <span className="status-item" title={`Downloading CodeForge ${update.version}`}>
+          <CircleArrowDown size={13} />
+          Downloading update {update.percent ?? 0}%
+        </span>
+      )}
+      {update?.state === "ready" && (
+        <button
+          className="status-item status-update"
+          title={`CodeForge ${update.version} has been downloaded`}
+          onClick={() => void installUpdate()}
+          data-testid="restart-to-update"
+        >
+          <CircleArrowDown size={13} />
+          Restart to update ({update.version})
+        </button>
+      )}
       <span className="status-item status-brand">CodeForge</span>
     </footer>
   );

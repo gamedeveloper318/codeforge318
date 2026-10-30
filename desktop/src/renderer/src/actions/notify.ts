@@ -4,10 +4,16 @@ import { getState, setState, type Toast } from "../state/store";
 let nextToastId = 1;
 const MAX_OUTPUT_LINES = 2000;
 
-export function toast(kind: Toast["kind"], message: string, detail?: string): void {
+export function toast(
+  kind: Toast["kind"],
+  message: string,
+  detail?: string,
+  actions?: Toast["actions"],
+): void {
   const id = nextToastId++;
-  setState({ toasts: [...getState().toasts.slice(-3), { id, kind, message, detail }] });
-  window.setTimeout(() => dismissToast(id), kind === "error" ? 9000 : 4500);
+  setState({ toasts: [...getState().toasts.slice(-3), { id, kind, message, detail, actions }] });
+  // Notifications that ask for a decision stay until the user acts on them.
+  if (!actions?.length) window.setTimeout(() => dismissToast(id), kind === "error" ? 9000 : 4500);
 }
 
 export function dismissToast(id: number): void {

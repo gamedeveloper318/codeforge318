@@ -12,14 +12,23 @@ files:
   - "!**/*.pdb"
   - "!**/*.map"
 # The terminal's native module and its ConPTY helpers must live outside the
-# asar archive so Windows can load and execute them.
+# asar archive so Windows can load and execute them. The Pyright language
+# server runs as its own process (with worker threads), so it is unpacked too.
 asarUnpack:
   - "**/node_modules/@lydell/node-pty-*/**"
+  - "**/node_modules/pyright/**"
 # node-pty ships prebuilt N-API binaries, so nothing needs compiling.
 npmRebuild: false
 nodeGypRebuild: false
 buildDependenciesFromSource: false
-publish: null
+# Where installed copies look for updates (electron-updater reads the generated
+# app-update.yml). Publishing itself is done by the release workflow, so builds
+# always run with --publish never.
+publish:
+  provider: github
+  owner: gamedeveloper318
+  repo: codeforge318
+  releaseType: release
 
 win:
   target:

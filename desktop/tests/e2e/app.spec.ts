@@ -268,3 +268,65 @@ test("shows TypeScript hover information and diagnostics", async () => {
   await page.keyboard.press("Control+Shift+M");
   await expect(page.getByTestId("problems")).toContainText("is not assignable to type 'number'");
 });
+
+test("Python IntelliSense from Pyright: errors, hover and completion", async () => {
+  const { app, page } = launched;
+  const project = makeProject({
+    "app.py":
+      "import os\n\n\ndef greet(name: str) -> str:\n    return 'Hello ' + name\n\n\ncount: int = 'oops'\nprint(greet('CodeForge'))\n",
+  });
+  await openFolder(app, page, project);
+  await openFileFromExplorer(page, "app.py");
+
+  // A real type error, reported by the language server in the Problems panel.
+  await page.keyboard.press("Control+Shift+M");
+  await expect(page.getByTestId("problems")).toContainText(
+    /not assignable to declared type "int"/,
+    {
+      timeout: 60_000,
+    },
+  );
+
+  // Hover over "greet" (line 4, "def greet(" -> column 5).
+  await page.locator(".monaco-editor .view-lines").first().click();
+  await page.keyboard.press("Control+Home");
+  for (let i = 0; i < 3; i++) await page.keyboard.press("ArrowDown");
+  for (let i = 0; i < 5; i++) await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Control+K");
+  await page.keyboard.press("Control+I");
+  await expect(
+    page.locator(".monaco-hover").filter({ hasText: "def greet(name: str) -> str" }).first(),
+  ).toBeVisible({ timeout: 30_000 });
+  await page.keyboard.press("Escape");
+
+  // Completion after "os." comes from the language server.
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type("os.pa");
+  await expect(
+    page.locator(".suggest-widget .monaco-list-row").filter({ hasText: "path" }).first(),
+  ).toBeVisible({ timeout: 30_000 });
+});
+
+test("update notifications and the Check for Updates command", async () => {
+  const { app, page } = launched;
+  // Tests run with updates turned off, so a manual check explains that.
+  await page.keyboard.press("Control+Shift+P");
+  await page.keyboard.type("check for updates");
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".toast").last()).toContainText("Automatic updates aren't available");
+
+  // Simulate the main process finishing a background download.
+  await app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0].webContents.send("update:status", {
+      state: "ready",
+      version: "9.9.9",
+    }),
+  );
+  await expect(page.getByTestId("restart-to-update")).toContainText("9.9.9");
+  const notice = page.locator(".toast", { hasText: "CodeForge 9.9.9 is ready to install" });
+  await expect(notice).toBeVisible();
+  await notice.getByRole("button", { name: "Later" }).click();
+  await expect(notice).toHaveCount(0);
+  // The status bar keeps offering the restart.
+  await expect(page.getByTestId("restart-to-update")).toBeVisible();
+});

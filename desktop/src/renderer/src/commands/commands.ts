@@ -26,6 +26,7 @@ import {
   showPanel,
   toggleTerminal,
 } from "../actions/terminal";
+import { checkForUpdates, installUpdate } from "../actions/update";
 import { closeFolder, openFiles, openFolder } from "../actions/workspace";
 import { getState, setState, type SidebarView } from "../state/store";
 
@@ -494,6 +495,18 @@ export const COMMANDS: Command[] = [
     title: "Toggle Developer Tools",
     category: "Help",
     run: () => api.invoke("app:toggle-devtools"),
+  },
+  {
+    id: "help.checkUpdates",
+    title: "Check for Updates…",
+    category: "Help",
+    run: checkForUpdates,
+  },
+  {
+    id: "update.install",
+    title: "Restart to Update",
+    category: "Help",
+    run: installUpdate,
   },
   { id: "help.about", title: "About CodeForge", category: "Help", run: showAbout },
 ];

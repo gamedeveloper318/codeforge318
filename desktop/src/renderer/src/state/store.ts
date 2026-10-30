@@ -5,6 +5,7 @@ import type {
   GitCommit,
   GitStatusResponse,
   SearchResponse,
+  UpdateStatus,
   WorkspaceInfo,
 } from "@shared/ipc";
 import { DEFAULT_SETTINGS, type Settings } from "@shared/settings";
@@ -31,6 +32,8 @@ export interface Toast {
   kind: "info" | "success" | "error";
   message: string;
   detail?: string;
+  /** Buttons shown in the notification; a notification with actions stays until used or dismissed. */
+  actions?: { label: string; run: () => void }[];
 }
 
 export interface OutputLine {
@@ -151,6 +154,7 @@ export interface WorkbenchState {
   search: SearchState;
 
   quickPick: QuickPickRequest | null;
+  updateStatus: UpdateStatus | null;
   contextMenu: { x: number; y: number; items: MenuItem[] } | null;
 }
 
@@ -202,6 +206,7 @@ export const useStore = create<WorkbenchState>()(() => ({
   },
 
   quickPick: null,
+  updateStatus: null,
   contextMenu: null,
 }));
 

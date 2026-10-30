@@ -1,4 +1,4 @@
-# Feature support matrix (CodeForge 0.1.0)
+# Feature support matrix (CodeForge 0.2.0)
 
 ✅ implemented and tested · 🟡 partial · ⏳ planned
 
@@ -23,7 +23,8 @@
 | Languages | Highlighting for 70+ file types | ✅ | |
 | Languages | TS/JS intelligence | 🟡 | Across open files; no `node_modules` types |
 | Languages | JSON/CSS/SCSS/Less/HTML intelligence | ✅ | |
-| Languages | LSP for Python, Go, Rust, Java, C#… | ⏳ | |
+| Languages | Python intelligence via Pyright (completion, type errors, hover, definition, references, rename) | ✅ | Unit (real Pyright) + E2E |
+| Languages | LSP for Go, Rust, Java, C#… | ⏳ | |
 | Run | Run active file, npm scripts | ✅ | Runtime must be installed |
 | Run | Sandboxed HTML / localhost preview | ✅ | |
 | Debug | Breakpoints, stepping (DAP) | ⏳ | Not shown in the UI as available |
@@ -31,5 +32,6 @@
 | Extensions | Extension API / VS Code extensions | ⏳ | Not compatible with VS Code extensions |
 | Platform | Windows 10/11 x64 installer | ✅ | Installed and E2E-tested |
 | Platform | macOS / Linux | 🟡 | Config only; untested |
-| Platform | Auto-update, code signing | ⏳ | |
+| Platform | Automatic updates from GitHub Releases | ✅ | From 0.2.0; unit tests with a fake updater, UI E2E |
+| Platform | Code signing | ⏳ | |
 | Cloud | Accounts, sync, database | ⏳ | See DATABASE.md |

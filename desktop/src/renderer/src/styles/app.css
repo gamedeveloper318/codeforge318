@@ -1331,3 +1331,12 @@ button.status-item:hover {
   inset: 0;
   z-index: 1;
 }
+.toast-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.status-item.status-update {
+  color: var(--accent-text);
+  font-weight: 600;
+}

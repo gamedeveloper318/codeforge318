@@ -77,10 +77,18 @@ jobs:
             "The installer is not code-signed yet, so Windows SmartScreen may warn on first run: choose *More info, then Run anyway*." \
             "" \
             "Release notes: https://codeforge318.vercel.app/releases")
+          # latest.yml and the blockmap are what installed copies read to update themselves.
+          assets=("$installer" "$installer.blockmap" desktop/release/latest.yml desktop/release/SHA256SUMS.txt)
+          for asset in "${assets[@]}"; do
+            if [ ! -f "$asset" ]; then
+              echo "::error::Missing release file: $asset"
+              exit 1
+            fi
+          done
           if gh release view "$TAG" > /dev/null 2>&1; then
-            gh release upload "$TAG" "$installer" desktop/release/SHA256SUMS.txt --clobber
+            gh release upload "$TAG" "${assets[@]}" --clobber
           else
-            gh release create "$TAG" "$installer" desktop/release/SHA256SUMS.txt \
+            gh release create "$TAG" "${assets[@]}" \
               --title "CodeForge ${TAG#v}" --notes "$notes" --verify-tag
           fi
 

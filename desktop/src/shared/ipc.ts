@@ -131,6 +131,19 @@ export interface TerminalSession {
   title: string;
 }
 
+/** State of the automatic updater, shown in the status bar and notifications. */
+export interface UpdateStatus {
+  state: "unsupported" | "idle" | "checking" | "up-to-date" | "downloading" | "ready" | "error";
+  /** The new version (downloading/ready) or the installed version (up-to-date). */
+  version?: string;
+  /** Download progress, 0-100. */
+  percent?: number;
+  message?: string;
+}
+
+/** A JSON-RPC message exchanged with a language server. */
+export type LspMessage = Record<string, unknown>;
+
 export interface ConfirmOptions {
   type?: "none" | "info" | "warning" | "question" | "error";
   message: string;
@@ -188,12 +201,17 @@ export interface InvokeChannels {
   "settings:reset": { args: []; result: Settings };
   "preview:open-file": { args: [path: string]; result: void };
   "preview:open-url": { args: [url: string]; result: void };
+  "update:status": { args: []; result: UpdateStatus };
+  "update:check": { args: []; result: UpdateStatus };
+  "update:install": { args: []; result: void };
+  "lsp:start": { args: [language: "python"]; result: void };
 }
 
 /** Fire-and-forget channels (renderer -> main via ipcRenderer.send). */
 export interface SendChannels {
   "terminal:write": [id: number, data: string];
   "terminal:resize": [id: number, cols: number, rows: number];
+  "lsp:send": [language: "python", message: LspMessage];
 }
 
 /** Events pushed from main to the renderer. */
@@ -204,6 +222,9 @@ export interface EventChannels {
   "terminal:exit": { id: number; exitCode: number };
   "settings:changed": Settings;
   "window:close-requested": void;
+  "update:status": UpdateStatus;
+  "lsp:message": { language: "python"; message: LspMessage };
+  "lsp:stopped": { language: "python"; reason: string };
 }
 
 export type InvokeChannel = keyof InvokeChannels;
@@ -257,9 +278,17 @@ export const INVOKE_CHANNELS: readonly InvokeChannel[] = [
   "settings:reset",
   "preview:open-file",
   "preview:open-url",
+  "update:status",
+  "update:check",
+  "update:install",
+  "lsp:start",
 ];
 
-export const SEND_CHANNELS: readonly SendChannel[] = ["terminal:write", "terminal:resize"];
+export const SEND_CHANNELS: readonly SendChannel[] = [
+  "terminal:write",
+  "terminal:resize",
+  "lsp:send",
+];
 
 export const EVENT_CHANNELS: readonly EventChannel[] = [
   "fs:changed",
@@ -268,6 +297,9 @@ export const EVENT_CHANNELS: readonly EventChannel[] = [
   "terminal:exit",
   "settings:changed",
   "window:close-requested",
+  "update:status",
+  "lsp:message",
+  "lsp:stopped",
 ];
 
 /** The API exposed on `window.codeforge` by the preload script. */

@@ -17,7 +17,9 @@
 | Previews: separate in-memory session, sandbox, no preload, all permissions denied, navigation limited to localhost / the previewed folder | `desktop/src/main/preview.ts` |
 | Git invoked with argument arrays (no shell), branch names validated (no option injection), no interactive prompts | `git-service.ts` |
 | Child processes don't inherit Electron-internal variables | `env.ts` |
-| No telemetry; no network calls except user-initiated (Git remotes, links, previews) | — |
+| Automatic updates only from this repository's GitHub Releases over HTTPS, verified against the release's SHA-512 before installing; restart only after the user confirms | `desktop/src/main/update-service.ts`, `electron-builder.yml` (`publish`) |
+| Python language server (Pyright) runs as a separate process with Electron's Node.js; it only receives Python files saved on disk, and runs no user code | `desktop/src/main/lsp-service.ts` |
+| No telemetry; network calls only for update checks (can be turned off) and user-initiated actions (Git remotes, links, previews) | — |
 
 These controls are covered by tests: `tests/unit/main-services.test.ts` (path guard, symlink escape, refusal outside folder, branch-name injection) and `tests/e2e/app.spec.ts` ("keeps Node.js and the filesystem out of reach of the page").
 
@@ -36,5 +38,5 @@ These controls are covered by tests: `tests/unit/main-services.test.ts` (path gu
 ## Known gaps
 
 - Installer is not code-signed (SmartScreen warning).
-- No auto-update channel yet (so no update-signature verification needed yet).
+- Updates are verified by SHA-512 but not by code signature, because the installer is not signed yet.
 - The integrated terminal is, by design, a full shell: anything typed there runs with the user's permissions.

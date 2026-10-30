@@ -53,6 +53,8 @@ export const settingsSchema = z.object({
   "terminal.shell": z.string().max(500).catch(""),
   "terminal.fontSize": z.number().int().min(8).max(32).catch(13),
   "terminal.cursorBlink": z.boolean().catch(true),
+  "python.languageServer": z.boolean().catch(true),
+  "update.checkOnStartup": z.boolean().catch(true),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
@@ -83,7 +85,7 @@ type SettingControl =
 
 export interface SettingDescriptor {
   key: SettingKey;
-  category: "Appearance" | "Editor" | "Files" | "Search" | "Terminal";
+  category: "Appearance" | "Editor" | "Files" | "Search" | "Terminal" | "Python" | "Updates";
   label: string;
   description: string;
   control: SettingControl;
@@ -290,6 +292,22 @@ export const SETTING_DESCRIPTORS: SettingDescriptor[] = [
     category: "Terminal",
     label: "Cursor blink",
     description: "Blink the terminal cursor.",
+    control: { type: "boolean" },
+  },
+  {
+    key: "python.languageServer",
+    category: "Python",
+    label: "Python IntelliSense",
+    description:
+      "Completion, error checking, hover, go to definition and rename for Python files, powered by the bundled Pyright language server.",
+    control: { type: "boolean" },
+  },
+  {
+    key: "update.checkOnStartup",
+    category: "Updates",
+    label: "Check for updates automatically",
+    description:
+      "Check GitHub for a newer CodeForge when the app starts (and every few hours), download it in the background and ask before restarting.",
     control: { type: "boolean" },
   },
 ];

@@ -59,7 +59,7 @@ export const HIGHLIGHTS: Feature[] = [
     id: "intelligence",
     title: "Language intelligence",
     summary:
-      "Completion, diagnostics and formatting for TypeScript, JavaScript, JSON, CSS and HTML; highlighting for 70+ file types.",
+      "Completion, errors, hover and go to definition for Python (Pyright), TypeScript, JavaScript, JSON, CSS and HTML; highlighting for 70+ file types.",
     icon: "brain",
   },
   {
@@ -147,7 +147,13 @@ export const SUPPORT_MATRIX: MatrixRow[] = [
   },
   {
     area: "Languages",
-    capability: "Language servers for Python, Go, Rust, Java, C#…",
+    capability: "Python intelligence (Pyright language server)",
+    status: "available",
+    note: "Completion, type errors, hover, go to definition, references, rename",
+  },
+  {
+    area: "Languages",
+    capability: "Language servers for Go, Rust, Java, C#…",
     status: "planned",
   },
   {
@@ -176,5 +182,10 @@ export const SUPPORT_MATRIX: MatrixRow[] = [
     status: "partial",
     note: "Build from source; not yet tested",
   },
-  { area: "Platform", capability: "Automatic updates", status: "planned" },
+  {
+    area: "Platform",
+    capability: "Automatic updates",
+    status: "available",
+    note: "From 0.2.0: downloads in the background, asks before restarting",
+  },
 ];

@@ -24,9 +24,21 @@ const FAQ: { q: string; a: React.ReactNode }[] = [
     q: "Which languages are supported?",
     a: (
       <>
-        Syntax highlighting covers more than 70 file types. Completion, diagnostics and formatting
-        are built in for TypeScript, JavaScript, JSON, CSS, SCSS, Less and HTML. See{" "}
-        <Link href="/docs/languages">Languages</Link> for details.
+        Syntax highlighting covers more than 70 file types. Python gets completion, type errors,
+        hover and go to definition from the bundled Pyright language server, and TypeScript,
+        JavaScript, JSON, CSS, SCSS, Less and HTML have built-in completion, diagnostics and
+        formatting. See <Link href="/docs/languages">Languages</Link> for details.
+      </>
+    ),
+  },
+  {
+    q: "Does CodeForge update itself?",
+    a: (
+      <>
+        Yes, from version 0.2.0. New versions download in the background and CodeForge asks before
+        restarting; you can also use <em>Help → Check for Updates…</em>. Version 0.1.1 has no
+        updater, so install the latest version from the <Link href="/download">download page</Link>{" "}
+        once.
       </>
     ),
   },

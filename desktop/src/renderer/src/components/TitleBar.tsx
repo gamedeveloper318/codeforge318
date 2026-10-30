@@ -111,7 +111,10 @@ const MENUS: { label: string; entries: MenuEntry[] }[] = [
     label: "Terminal",
     entries: ["terminal.new", "terminal.toggle", "terminal.clear", "terminal.kill"],
   },
-  { label: "Help", entries: ["help.shortcuts", "help.devtools", "-", "help.about"] },
+  {
+    label: "Help",
+    entries: ["help.shortcuts", "help.devtools", "-", "help.checkUpdates", "help.about"],
+  },
 ];
 
 function menuItems(entries: MenuEntry[], recent: string[]): MenuItem[] {

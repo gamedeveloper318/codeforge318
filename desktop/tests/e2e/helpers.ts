@@ -24,6 +24,8 @@ export async function launchApp(): Promise<LaunchedApp> {
   // Electron behave like plain Node.js and never open a window.
   delete env.ELECTRON_RUN_AS_NODE;
   env.CODEFORGE_USER_DATA_DIR = userData;
+  // Never contact GitHub for updates (or install one) in the middle of a test run.
+  env.CODEFORGE_DISABLE_UPDATES = "1";
 
   const executable = process.env.CODEFORGE_E2E_EXECUTABLE;
   const app = await electron.launch(

@@ -9,6 +9,8 @@ import { loadDir, refreshForChanges } from "./explorer";
 import { refreshGit } from "./git";
 import { logOutput, reportError } from "./notify";
 import { handleTerminalData, handleTerminalExit } from "./terminal";
+import { handleUpdateStatus } from "./update";
+import { setupPythonLanguageServer } from "../lsp/python";
 
 export function applySettings(settings: Settings): void {
   const light = settings["workbench.colorTheme"] === "codeforge-light";
@@ -79,13 +81,15 @@ export async function openFiles(): Promise<void> {
 
 /** Loads state from the main process and subscribes to its events. Runs once. */
 export async function initialize(): Promise<void> {
-  const [appInfo, settings, workspace] = await Promise.all([
+  const [appInfo, settings, workspace, updateStatus] = await Promise.all([
     api.invoke("app:info"),
     api.invoke("settings:get"),
     api.invoke("workspace:current"),
+    api.invoke("update:status"),
   ]);
   applySettings(settings);
-  setState({ appInfo });
+  setState({ appInfo, updateStatus });
+  setupPythonLanguageServer();
 
   api.on("settings:changed", applySettings);
   api.on("fs:changed", ({ paths }) => {
@@ -95,6 +99,7 @@ export async function initialize(): Promise<void> {
   api.on("git:changed", () => void refreshGit());
   api.on("terminal:data", ({ id, data }) => handleTerminalData(id, data));
   api.on("terminal:exit", ({ id, exitCode }) => handleTerminalExit(id, exitCode));
+  api.on("update:status", handleUpdateStatus);
   api.on("window:close-requested", () => {
     void confirmUnsavedChanges().then((ok) => {
       if (ok) void api.invoke("window:confirm-close");

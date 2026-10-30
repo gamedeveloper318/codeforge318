@@ -23,6 +23,7 @@ Electron splits the app into processes with very different privileges:
 │ fs-service.ts   read / write / create / rename / trash                                      │
 │ search-service  project search          git-service   runs the user's git (execFile)        │
 │ terminal-service node-pty shells        preview.ts    sandboxed preview windows             │
+│ update-service  electron-updater (GitHub Releases)    lsp-service  Pyright for Python       │
 │ app-state.ts    settings.json + state.json in %APPDATA%\CodeForge                           │
 └───────────────────────────────────────────────┬────────────────────────────────────────────┘
                                                 │ allow-listed IPC channels (shared/ipc.ts)
@@ -44,6 +45,8 @@ Key decisions:
 - **Terminals.** `@lydell/node-pty` ships prebuilt N-API binaries, so no compiler is needed and the same binary works in Node (tests) and Electron. Output is batched every 5 ms. The binaries are unpacked from the asar archive (`asarUnpack` in `electron-builder.yml`).
 - **Git.** `git` is called with argument arrays (never a shell), `GIT_TERMINAL_PROMPT=0` so it never hangs, and `GIT_OPTIONAL_LOCKS=0` so status checks don't fight other Git tools.
 - **Close handshake.** Closing the window asks the UI first; the UI offers to save dirty files and then confirms.
+- **Python IntelliSense.** Monaco 0.57's built-in LSP client (`monaco.lsp.MonacoLspClient`) talks to Pyright through a worker-shaped port (`renderer/src/lsp/python.ts`) over IPC. `lsp-service.ts` runs Pyright with Electron's Node (`ELECTRON_RUN_AS_NODE`), frames messages, and its `LspBridge` only forwards Python files saved on disk, scopes the server's features to Python, tells the server which folder is open, answers server requests the editor doesn't implement, and replays open documents after a crash restart. The server starts the first time a Python file is opened.
+- **Automatic updates.** `update-service.ts` wraps electron-updater: background download, `update:status` events to the UI, install on "Restart Now" (after the unsaved-changes prompt) or on quit. The GitHub provider is configured in `electron-builder.yml`; the release workflow uploads `latest.yml` and the blockmap that installed copies read.
 
 ## Website
 

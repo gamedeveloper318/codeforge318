@@ -23,9 +23,11 @@ import type { AppState } from "./app-state";
 import type { FileService } from "./fs-service";
 import type { GitService } from "./git-service";
 import { log } from "./log";
+import type { LspService } from "./lsp-service";
 import { isLocalPreviewUrl, openPreviewWindow } from "./preview";
 import type { SearchService } from "./search-service";
 import type { TerminalService } from "./terminal-service";
+import type { UpdateService } from "./update-service";
 import type { Workspace } from "./workspace";
 
 export interface IpcDeps {
@@ -39,6 +41,8 @@ export interface IpcDeps {
   search: SearchService;
   git: GitService;
   terminals: TerminalService;
+  updates: UpdateService;
+  pythonLsp: LspService;
 }
 
 const absPath = z.string().min(1).max(4096);
@@ -72,7 +76,7 @@ const settingsPatch = z.custom<Partial<Settings>>(
 const samePathKey = (p: string) => (process.platform === "win32" ? p.toLowerCase() : p);
 
 export function registerIpcHandlers(deps: IpcDeps): void {
-  const { state, workspace, files, search, git, terminals } = deps;
+  const { state, workspace, files, search, git, terminals, updates, pythonLsp } = deps;
 
   const assertTrusted = (event: IpcMainInvokeEvent | IpcMainEvent) => {
     const win = deps.getWindow();
@@ -131,6 +135,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   const openWorkspace = async (root: string) => {
     const info = await workspace.open(root);
     state.addRecentWorkspace(info.root);
+    pythonLsp.workspaceChanged();
     return info;
   };
 
@@ -211,6 +216,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   handle("workspace:close", z.tuple([]), () => {
     workspace.close();
     state.state.set({ ...state.state.get(), lastWorkspace: null });
+    pythonLsp.workspaceChanged();
   });
 
   // --- dialogs --------------------------------------------------------------
@@ -299,6 +305,19 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   );
   on("terminal:resize", z.tuple([terminalId, dimension, dimension]), (id, cols, rows) =>
     terminals.resize(id, cols, rows),
+  );
+
+  // --- updates --------------------------------------------------------------
+  handle("update:status", z.tuple([]), () => updates.current);
+  handle("update:check", z.tuple([]), () => updates.check());
+  handle("update:install", z.tuple([]), () => updates.install());
+
+  // --- language servers -----------------------------------------------------
+  handle("lsp:start", z.tuple([z.literal("python")]), () => pythonLsp.start());
+  on(
+    "lsp:send",
+    z.tuple([z.literal("python"), z.record(z.string(), z.unknown())]),
+    (_language, message) => pythonLsp.send(message),
   );
 
   // --- settings -------------------------------------------------------------

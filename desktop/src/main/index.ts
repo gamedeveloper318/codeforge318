@@ -11,6 +11,7 @@ import {
   session,
   shell,
 } from "electron";
+import { autoUpdater } from "electron-updater";
 import type { EventChannel, EventChannels } from "@shared/ipc";
 import type { Settings } from "@shared/settings";
 import { AppState } from "./app-state";
@@ -18,9 +19,11 @@ import { FileService } from "./fs-service";
 import { GitService } from "./git-service";
 import { registerIpcHandlers } from "./ipc";
 import { initLog, log } from "./log";
+import { LspService } from "./lsp-service";
 import { isInside } from "./path-guard";
 import { SearchService } from "./search-service";
 import { TerminalService } from "./terminal-service";
+import { UpdateService, type Updater } from "./update-service";
 import { Workspace } from "./workspace";
 
 // Tests (and power users) can isolate settings and state in another folder.
@@ -93,6 +96,50 @@ const search = new SearchService(workspace, settings);
 const git = new GitService(workspace);
 const terminals = new TerminalService(send, settings);
 
+// Tests (and anyone who prefers manual updates) can switch the updater off.
+const updatesDisabled = Boolean(process.env.CODEFORGE_DISABLE_UPDATES);
+const updatesEnabled = app.isPackaged && !updatesDisabled;
+const updates = new UpdateService({
+  updater: updatesEnabled ? (autoUpdater as unknown as Updater) : null,
+  unsupportedReason: updatesDisabled
+    ? "Automatic updates are turned off for this session."
+    : undefined,
+  currentVersion: app.getVersion(),
+  emit: (status) => send("update:status", status),
+  log,
+  beforeInstall: () => {
+    closeConfirmed = true;
+    terminals.killAll();
+    pythonLsp.stop();
+  },
+});
+if (updatesEnabled) {
+  autoUpdater.logger = {
+    info: (message: unknown) => log("info", `updater: ${String(message)}`),
+    warn: (message: unknown) => log("warn", `updater: ${String(message)}`),
+    error: (message: unknown) => log("error", `updater: ${String(message)}`),
+    debug: () => undefined,
+  };
+}
+
+/** Pyright's server entry point; packaged builds run it from app.asar.unpacked. */
+function pyrightScript(): string {
+  return require
+    .resolve("pyright/langserver.index.js")
+    .replace(/app\.asar([\\/])/, "app.asar.unpacked$1");
+}
+
+const pythonLsp = new LspService({
+  languageId: "python",
+  serverScript: pyrightScript(),
+  args: ["--stdio"],
+  workspaceRoot: () => workspace.root,
+  enabled: () => settings()["python.languageServer"],
+  emitMessage: (message) => send("lsp:message", { language: "python", message }),
+  emitStopped: (reason) => send("lsp:stopped", { language: "python", reason }),
+  log,
+});
+
 function themeOf(current: Settings): "dark" | "light" {
   return current["workbench.colorTheme"] === "codeforge-light" ? "light" : "dark";
 }
@@ -101,6 +148,7 @@ function applySettings(next: Settings): void {
   const theme = themeOf(next);
   nativeTheme.themeSource = theme;
   if (mainWindow && process.platform !== "darwin") mainWindow.setTitleBarOverlay(TITLE_BAR[theme]);
+  if (!next["python.languageServer"]) pythonLsp.stop();
   send("settings:changed", next);
 }
 
@@ -304,9 +352,20 @@ if (!app.requestSingleInstanceLock()) {
       search,
       git,
       terminals,
+      updates,
+      pythonLsp,
     });
     await restoreWorkspace();
     createMainWindow();
+
+    if (updatesEnabled) {
+      // First check shortly after startup, then every six hours.
+      const checkIfWanted = () => {
+        if (settings()["update.checkOnStartup"]) void updates.check();
+      };
+      setTimeout(checkIfWanted, 15_000);
+      setInterval(checkIfWanted, 6 * 60 * 60 * 1000);
+    }
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
@@ -315,6 +374,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on("window-all-closed", () => {
     terminals.killAll();
+    pythonLsp.stop();
     workspace.close();
     if (process.platform !== "darwin") app.quit();
   });

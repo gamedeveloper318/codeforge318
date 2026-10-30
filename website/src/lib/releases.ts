@@ -11,6 +11,28 @@ export interface ReleaseNote {
 /** Human-written release notes, newest first. */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: "0.2.0",
+    date: "2026-10-30",
+    title: "Python IntelliSense and automatic updates",
+    summary:
+      "CodeForge now understands Python and keeps itself up to date: install this version once, and future versions arrive automatically.",
+    added: [
+      "Python IntelliSense powered by the bundled Pyright language server: completion, type errors in the Problems panel, hover information, signature help, go to definition, find references and rename. Works without installing anything extra; with Python installed it also understands your installed packages.",
+      'Automatic updates: CodeForge checks GitHub for a newer version when it starts and every few hours, downloads it in the background and offers "Restart Now" or "Later". If you simply quit, the update installs on exit.',
+      "Help → Check for Updates… to check right away, and a status-bar indicator while an update downloads or waits to be installed.",
+      "New settings: “Python IntelliSense” and “Check for updates automatically”, both on by default.",
+    ],
+    security: [
+      "Updates are downloaded over HTTPS from this project's GitHub Releases and checked against the SHA-512 recorded with each release before they are installed.",
+      "Restarting to update first offers to save unsaved files, exactly like closing the window.",
+    ],
+    knownLimitations: [
+      "Version 0.1.1 has no updater, so install 0.2.0 from the download page once; later versions then arrive automatically.",
+      "The installer is still not code-signed, so Windows SmartScreen may warn on the first manual install.",
+      "Language servers for Go, Rust, Java, C# and other languages are not included yet.",
+    ],
+  },
+  {
     version: "0.1.1",
     date: "2026-10-30",
     title: "First public preview",
