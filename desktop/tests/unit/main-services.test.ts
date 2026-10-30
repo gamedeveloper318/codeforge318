@@ -22,8 +22,8 @@ import { DEFAULT_SETTINGS } from "@shared/settings";
 import { FileService, looksBinary } from "../../src/main/fs-service";
 import { GitService } from "../../src/main/git-service";
 import { assertAbsolutePath, isInside, realpathOfExisting } from "../../src/main/path-guard";
-import { buildMatcher, findMatches } from "../../src/main/search-matcher";
-import { SearchService } from "../../src/main/search-service";
+import { buildMatcher, findMatches, replaceInText } from "@shared/search-matcher";
+import { replaceInFiles, SearchService } from "../../src/main/search-service";
 import { Workspace } from "../../src/main/workspace";
 
 let root: string;
@@ -226,6 +226,82 @@ describe("search", () => {
         10,
       ),
     ).toEqual([]);
+  });
+
+  it("replaces plain text literally and keeps line endings", () => {
+    const matcher = buildMatcher({
+      pattern: "a.b",
+      isRegex: false,
+      caseSensitive: false,
+      wholeWord: false,
+    });
+    expect(replaceInText("a.b x A.B\r\nno match\na.b", matcher, "$1&", false)).toEqual({
+      text: "$1& x $1&\r\nno match\n$1&",
+      count: 3,
+    });
+  });
+
+  it("expands $1, $<name>, $& and $$ in regex replacements", () => {
+    const matcher = buildMatcher({
+      pattern: "(?<key>\\w+)=(\\d+)",
+      isRegex: true,
+      caseSensitive: true,
+      wholeWord: false,
+    });
+    expect(replaceInText("a=1, b=22", matcher, "$2:$<key> [$&] $$", true)).toEqual({
+      text: "1:a [a=1] $, 22:b [b=22] $",
+      count: 2,
+    });
+  });
+
+  it("replaces exactly what search finds (whole word, no zero-width matches)", () => {
+    const word = buildMatcher({
+      pattern: "cat",
+      isRegex: false,
+      caseSensitive: false,
+      wholeWord: true,
+    });
+    expect(replaceInText("cat concatenate Cat", word, "dog", false)).toEqual({
+      text: "dog concatenate dog",
+      count: 2,
+    });
+    const empty = buildMatcher({
+      pattern: "x*",
+      isRegex: true,
+      caseSensitive: false,
+      wholeWord: false,
+    });
+    expect(replaceInText("abc", empty, "Y", true)).toEqual({ text: "abc", count: 0 });
+  });
+
+  it("replaces in files on disk, keeping BOMs and refusing paths outside the folder", async () => {
+    const bomFile = path.join(root, "bom.txt");
+    writeFileSync(
+      bomFile,
+      Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from("greeting")]),
+    );
+    const query = {
+      pattern: "greeting",
+      isRegex: false,
+      caseSensitive: true,
+      wholeWord: false,
+      include: "",
+      exclude: "",
+    };
+    const result = await replaceInFiles(workspace, query, "message", [
+      path.join(root, "src", "app.ts"),
+      bomFile,
+      path.join(outside, "secret.txt"),
+    ]);
+    expect(result.filesChanged).toBe(2);
+    expect(result.replacements).toBe(3);
+    expect(result.failed).toHaveLength(1);
+    expect(result.failed[0].message).toMatch(/outside the open folder/);
+    expect(readFileSync(path.join(root, "src", "app.ts"), "utf8")).toBe(
+      "const message = 'hello';\nexport default message;\n",
+    );
+    expect([...readFileSync(bomFile).subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+    expect(readFileSync(outside + path.sep + "secret.txt", "utf8")).toBe("top secret");
   });
 
   it("searches the workspace and skips excluded folders", async () => {

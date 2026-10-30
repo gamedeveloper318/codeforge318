@@ -118,13 +118,18 @@ export const SUPPORT_MATRIX: MatrixRow[] = [
   },
   { area: "Files", capability: "Recent folders, reopen last folder", status: "available" },
   { area: "Search", capability: "Project-wide text and regex search", status: "available" },
-  { area: "Search", capability: "Replace across files", status: "planned" },
+  {
+    area: "Search",
+    capability: "Replace across files",
+    status: "available",
+    note: "Preview, confirm, regex groups; open files stay undoable",
+  },
   {
     area: "Terminal",
     capability: "Real shells, multiple sessions, resize, copy/paste",
     status: "available",
   },
-  { area: "Terminal", capability: "Split terminals", status: "planned" },
+  { area: "Terminal", capability: "Split terminals (up to 4 side by side)", status: "available" },
   { area: "Git", capability: "Status, stage, unstage, discard, diff, commit", status: "available" },
   {
     area: "Git",

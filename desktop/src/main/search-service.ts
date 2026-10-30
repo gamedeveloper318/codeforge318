@@ -1,10 +1,11 @@
-import { readFile, stat } from "node:fs/promises";
+import { readFile, stat, writeFile } from "node:fs/promises";
 import { GlobSet, splitPatterns } from "@shared/glob";
-import type { SearchFileResult, SearchQuery, SearchResponse } from "@shared/ipc";
+import type { ReplaceResult, SearchFileResult, SearchQuery, SearchResponse } from "@shared/ipc";
 import type { Settings } from "@shared/settings";
 import { looksBinary } from "./fs-service";
 import { toRelative, walkFiles } from "./file-walker";
-import { buildMatcher, findMatches } from "./search-matcher";
+import { buildMatcher, findMatches, replaceInText } from "@shared/search-matcher";
+import { friendlyFsError } from "./errors";
 import type { Workspace } from "./workspace";
 
 const MAX_MATCHES = 5000;
@@ -84,6 +85,45 @@ export class SearchService {
       cancelled: false,
     };
   }
+}
+
+const BOM = Buffer.from([0xef, 0xbb, 0xbf]);
+
+/**
+ * Replaces the query's matches in the given files on disk (files open in the
+ * editor are changed in the editor instead, so they never come here).
+ */
+export async function replaceInFiles(
+  workspace: Workspace,
+  query: SearchQuery,
+  replacement: string,
+  paths: string[],
+): Promise<ReplaceResult> {
+  const matcher = buildMatcher(query);
+  const result: ReplaceResult = { filesChanged: 0, replacements: 0, failed: [] };
+  for (const requested of paths) {
+    try {
+      const file = await workspace.resolve(requested);
+      const buffer = await readFile(file);
+      if (looksBinary(buffer)) throw new Error("It is a binary file.");
+      const bom = buffer.subarray(0, 3).equals(BOM);
+      const { text, count } = replaceInText(
+        buffer.toString("utf8", bom ? 3 : 0),
+        new RegExp(matcher),
+        replacement,
+        query.isRegex,
+      );
+      if (!count) continue;
+      const body = Buffer.from(text, "utf8");
+      await writeFile(file, bom ? Buffer.concat([BOM, body]) : body);
+      result.filesChanged++;
+      result.replacements += count;
+    } catch (error) {
+      const message = friendlyFsError(error, "replace in", requested).message;
+      result.failed.push({ path: requested, message });
+    }
+  }
+  return result;
 }
 
 async function readSearchable(file: string): Promise<string | null> {

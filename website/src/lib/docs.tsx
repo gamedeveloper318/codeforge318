@@ -316,11 +316,30 @@ export const DOCS: DocPage[] = [
           , <code>dist</code> and <code>.next</code> are always skipped — change that with the{" "}
           <code>search.exclude</code> setting.
         </p>
+        <h2>Replace across files</h2>
+        <p>
+          Click the arrow left of the search box to show the <strong>Replace</strong> field. Each
+          result previews the change (old text struck through, new text in green). Use the{" "}
+          <strong>Replace All</strong> button (or <K>Ctrl+Enter</K>) for every result, or the button
+          on a file to replace only there. CodeForge asks before replacing.
+        </p>
+        <ul>
+          <li>
+            Files open in the editor are changed in the editor, so <K>Ctrl+Z</K> undoes the
+            replacement and you decide when to save. Other files are changed on disk.
+          </li>
+          <li>
+            With regular expressions on, the replacement can use <code>$1</code>,{" "}
+            <code>$&lt;name&gt;</code> and <code>$&amp;</code> (the whole match); <code>$$</code>{" "}
+            inserts a dollar sign. Without regular expressions the text is inserted exactly as
+            typed.
+          </li>
+          <li>Search results include unsaved changes in open files.</li>
+        </ul>
         <h2>Limits</h2>
         <p>
           Search stops after 5,000 matches and skips binary files and files over 2 MB. Regular
-          expressions match within a line. Replacing across files is not available yet; use{" "}
-          <K>Ctrl+H</K> to replace inside a file.
+          expressions match within a line.
         </p>
       </>
     ),
@@ -352,6 +371,12 @@ export const DOCS: DocPage[] = [
             <K>Ctrl+V</K> pastes.
           </li>
         </ul>
+        <h2>Split terminals</h2>
+        <p>
+          Click the split button in the terminal toolbar or press <K>Ctrl+Shift+5</K> to open
+          another terminal next to the current one (up to four side by side). Click a pane to type
+          in it; the list on the right shows split terminals grouped together.
+        </p>
         <h2>Choosing a shell</h2>
         <p>
           By default CodeForge starts Windows PowerShell. To use something else, set{" "}
@@ -863,6 +888,12 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
               <td>Toggle terminal / new terminal</td>
               <td>
                 <K>Ctrl+`</K> / <K>Ctrl+Shift+`</K>
+              </td>
+            </tr>
+            <tr>
+              <td>Split terminal</td>
+              <td>
+                <K>Ctrl+Shift+5</K>
               </td>
             </tr>
             <tr>

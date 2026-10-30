@@ -1,4 +1,4 @@
-# Feature support matrix (CodeForge 0.2.0)
+# Feature support matrix (CodeForge 0.3.0)
 
 ✅ implemented and tested · 🟡 partial · ⏳ planned
 
@@ -14,9 +14,9 @@
 | Files | Reveal in Explorer, copy path, open terminal here, Git colors | ✅ | |
 | Files | Recent folders, reopen last folder, open folder from command line | ✅ | |
 | Search | Go to File (fuzzy), project text/regex search, include/exclude | ✅ | E2E |
-| Search | Replace across files | ⏳ | |
+| Search | Replace across files (preview, confirm, regex groups; open files changed in the editor) | ✅ | Unit + E2E |
 | Terminal | Real shells via ConPTY, multiple sessions, resize, copy/paste, custom shell | ✅ | Unit (real PowerShell) + E2E |
-| Terminal | Split panes | ⏳ | |
+| Terminal | Split terminals (up to 4 side by side) | ✅ | E2E |
 | Git | Status, stage/unstage, discard, diff (working tree & staged), commit | ✅ | Unit (real git) + E2E commit |
 | Git | Branch switch/create, pull/push/fetch, recent commits | ✅ | Remote ops use the user's credentials; not E2E-tested against a remote |
 | Git | Merge-conflict editor, blame, graph | ⏳ | Conflicted files are listed |

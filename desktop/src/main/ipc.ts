@@ -25,7 +25,7 @@ import type { GitService } from "./git-service";
 import { log } from "./log";
 import type { LspService } from "./lsp-service";
 import { isLocalPreviewUrl, openPreviewWindow } from "./preview";
-import type { SearchService } from "./search-service";
+import { replaceInFiles, type SearchService } from "./search-service";
 import type { TerminalService } from "./terminal-service";
 import type { UpdateService } from "./update-service";
 import type { Workspace } from "./workspace";
@@ -264,6 +264,15 @@ export function registerIpcHandlers(deps: IpcDeps): void {
 
   // --- search ---------------------------------------------------------------
   handle("search:find", z.tuple([searchQuery]), (query) => search.find(query));
+  handle(
+    "search:replace",
+    z.tuple([
+      searchQuery.refine((q) => q.pattern.length > 0),
+      z.string().max(10_000),
+      z.array(absPath).max(10_000),
+    ]),
+    (query, replacement, paths) => replaceInFiles(workspace, query, replacement, paths),
+  );
 
   // --- git ------------------------------------------------------------------
   handle("git:status", z.tuple([]), () => git.status());

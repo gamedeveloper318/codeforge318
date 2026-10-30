@@ -307,6 +307,69 @@ test("Python IntelliSense from Pyright: errors, hover and completion", async () 
   ).toBeVisible({ timeout: 30_000 });
 });
 
+test("replaces across files: on disk, and in open editors with undo", async () => {
+  const { app, page } = launched;
+  const project = makeProject({
+    "a.txt": "foo one\nfoo two\n",
+    "b/c.txt": "say foo\n",
+    "open.txt": "foo open\n",
+  });
+  await openFolder(app, page, project);
+  await openFileFromExplorer(page, "open.txt");
+
+  await page.keyboard.press("Control+Shift+F");
+  await page.getByLabel("Search text").fill("foo");
+  await expect(page.getByText("4 results in 3 files")).toBeVisible();
+  await page.getByRole("button", { name: "Toggle Replace" }).click();
+  await page.getByLabel("Replace text").fill("bar");
+  // The results preview the change.
+  await expect(page.getByTestId("search-results").locator("ins").first()).toHaveText("bar");
+
+  await answerMessageBoxes(app, 0); // "Replace"
+  await page.getByRole("button", { name: "Replace All" }).click();
+  await expect(page.getByText(/No results in/)).toBeVisible();
+  expect(await shownMessages(app)).toEqual(["Replace 4 occurrences in 3 files with “bar”?"]);
+
+  // Files that were not open are changed on disk.
+  expect(readFileSync(path.join(project, "a.txt"), "utf8")).toBe("bar one\nbar two\n");
+  expect(readFileSync(path.join(project, "b", "c.txt"), "utf8")).toBe("say bar\n");
+  // The open file is changed in the editor and left unsaved.
+  expect(readFileSync(path.join(project, "open.txt"), "utf8")).toBe("foo open\n");
+  await expect(page.getByTestId("dirty-indicator")).toBeVisible();
+  await expect(page.locator(".monaco-editor .view-lines").first()).toContainText("bar open");
+  await page.locator(".monaco-editor .view-lines").first().click();
+  await page.keyboard.press("Control+S");
+  await expect(page.getByTestId("dirty-indicator")).toHaveCount(0);
+  expect(readFileSync(path.join(project, "open.txt"), "utf8")).toBe("bar open\n");
+});
+
+test("splits the terminal into side-by-side real shells", async () => {
+  const { app, page } = launched;
+  const project = makeProject({ "README.md": "split test" });
+  await openFolder(app, page, project);
+
+  await page.keyboard.press("Control+`");
+  const panes = page.getByTestId("terminal-pane");
+  await expect(panes).toHaveCount(1);
+  await expect(panes.first().locator(".xterm")).toBeVisible();
+  await page.keyboard.press("Control+Shift+5");
+  await expect(panes).toHaveCount(2);
+
+  // The new (right) pane is active: a command typed there runs there only.
+  await panes.nth(1).click();
+  const command =
+    process.platform === "win32" ? 'Write-Output ("pane-" + (40 + 2))' : 'echo "pane-$((40 + 2))"';
+  await page.keyboard.type(command);
+  await page.keyboard.press("Enter");
+  await expect(panes.nth(1).locator(".xterm-rows")).toContainText("pane-42", { timeout: 30_000 });
+  await expect(panes.nth(0).locator(".xterm-rows")).not.toContainText("pane-42");
+
+  await page.keyboard.press("Control+Shift+P");
+  await page.keyboard.type("kill active terminal");
+  await page.keyboard.press("Enter");
+  await expect(panes).toHaveCount(1);
+});
+
 test("update notifications and the Check for Updates command", async () => {
   const { app, page } = launched;
   // Tests run with updates turned off, so a manual check explains that.

@@ -91,6 +91,12 @@ export interface SearchResponse {
   cancelled: boolean;
 }
 
+export interface ReplaceResult {
+  filesChanged: number;
+  replacements: number;
+  failed: { path: string; message: string }[];
+}
+
 export interface GitFileChange extends GitChange {
   /** Absolute path on disk. */
   absolutePath: string;
@@ -179,6 +185,10 @@ export interface InvokeChannels {
   "fs:trash": { args: [path: string]; result: void };
   "fs:list-files": { args: []; result: string[] };
   "search:find": { args: [query: SearchQuery]; result: SearchResponse };
+  "search:replace": {
+    args: [query: SearchQuery, replacement: string, paths: string[]];
+    result: ReplaceResult;
+  };
   "git:status": { args: []; result: GitStatusResponse };
   "git:init": { args: []; result: void };
   "git:stage": { args: [paths: string[]]; result: void };
@@ -259,6 +269,7 @@ export const INVOKE_CHANNELS: readonly InvokeChannel[] = [
   "fs:trash",
   "fs:list-files",
   "search:find",
+  "search:replace",
   "git:status",
   "git:init",
   "git:stage",

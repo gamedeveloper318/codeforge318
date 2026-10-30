@@ -63,3 +63,67 @@ export function findMatches(text: string, matcher: RegExp, limit: number): Searc
   }
   return matches;
 }
+
+/**
+ * The text a regular-expression match is replaced with, supporting the same
+ * patterns as JavaScript's String.replace: $$, $&, $`, $', $1-$99 and $<name>.
+ */
+export function expandReplacement(
+  replacement: string,
+  match: RegExpExecArray,
+  line: string,
+): string {
+  return replacement.replace(
+    /\$(\$|&|`|'|\d{1,2}|<([^>]*)>)/g,
+    (token, what: string, name?: string) => {
+      if (what === "$") return "$";
+      if (what === "&") return match[0];
+      if (what === "`") return line.slice(0, match.index);
+      if (what === "'") return line.slice(match.index + match[0].length);
+      if (name !== undefined) return match.groups?.[name] ?? "";
+      const group = Number(what);
+      if (group >= 1 && group < match.length) return match[group] ?? "";
+      // "$12" with only one group means "$1" followed by "2", like String.replace.
+      if (what.length === 2 && Number(what[0]) >= 1 && Number(what[0]) < match.length) {
+        return (match[Number(what[0])] ?? "") + what[1];
+      }
+      return token;
+    },
+  );
+}
+
+/**
+ * Replaces every match, line by line (exactly the matches findMatches reports),
+ * keeping the file's line endings. Plain-text searches insert `replacement`
+ * literally; regular-expression searches expand $1, $<name> and friends.
+ */
+export function replaceInText(
+  text: string,
+  matcher: RegExp,
+  replacement: string,
+  isRegex: boolean,
+): { text: string; count: number } {
+  let count = 0;
+  // Odd indexes are the line separators, kept as they were.
+  const parts = text.split(/(\r\n|\r|\n)/);
+  for (let i = 0; i < parts.length; i += 2) {
+    const line = parts[i];
+    matcher.lastIndex = 0;
+    let output = "";
+    let last = 0;
+    let match: RegExpExecArray | null;
+    while ((match = matcher.exec(line)) !== null) {
+      if (match[0].length === 0) {
+        matcher.lastIndex++;
+        if (matcher.lastIndex > line.length) break;
+        continue;
+      }
+      output += line.slice(last, match.index);
+      output += isRegex ? expandReplacement(replacement, match, line) : replacement;
+      last = match.index + match[0].length;
+      count++;
+    }
+    if (last > 0) parts[i] = output + line.slice(last);
+  }
+  return { text: parts.join(""), count };
+}

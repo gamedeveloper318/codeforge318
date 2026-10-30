@@ -44,6 +44,8 @@ export interface OutputLine {
 
 export interface TerminalState {
   id: number;
+  /** Terminals in the same group are shown side by side (split). */
+  group: number;
   title: string;
   pid: number;
   exited: boolean;
@@ -111,6 +113,8 @@ export interface SearchState {
   wholeWord: boolean;
   include: string;
   exclude: string;
+  showReplace: boolean;
+  replacement: string;
   running: boolean;
   error: string | null;
   response: SearchResponse | null;
@@ -200,6 +204,8 @@ export const useStore = create<WorkbenchState>()(() => ({
     wholeWord: false,
     include: "",
     exclude: "",
+    showReplace: false,
+    replacement: "",
     running: false,
     error: null,
     response: null,

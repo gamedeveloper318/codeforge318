@@ -1,11 +1,14 @@
+import { GlobSet, splitPatterns } from "@shared/glob";
+import type { SearchQuery, SearchResponse } from "@shared/ipc";
 import { runCommandForPath } from "@shared/languages";
+import { buildMatcher, findMatches, replaceInText } from "@shared/search-matcher";
 import type { Settings } from "@shared/settings";
 import { api, errorMessage } from "../lib/bridge";
 import * as paths from "../lib/paths";
-import { isDirty } from "../monaco/models";
-import { getState, setState } from "../state/store";
-import { saveTab } from "./editor";
-import { reportError, toast } from "./notify";
+import { getEntry, isDirty } from "../monaco/models";
+import { getState, setState, type SearchState } from "../state/store";
+import { findFileTab, saveTab } from "./editor";
+import { logOutput, reportError, toast } from "./notify";
 import { createTerminal } from "./terminal";
 
 // ---------- Settings ----------
@@ -50,21 +53,150 @@ export async function runSearch(): Promise<void> {
   }
   setState({ search: { ...search, running: true, error: null } });
   try {
-    const response = await api.invoke("search:find", {
-      pattern: search.pattern,
-      isRegex: search.isRegex,
-      caseSensitive: search.caseSensitive,
-      wholeWord: search.wholeWord,
-      include: search.include,
-      exclude: search.exclude,
-    });
+    const response = await api.invoke("search:find", searchQuery(search));
     if (response.cancelled) return;
-    setState({ search: { ...getState().search, running: false, response } });
+    setState({
+      search: {
+        ...getState().search,
+        running: false,
+        response: withUnsavedEdits(response, search),
+      },
+    });
   } catch (error) {
     setState({
       search: { ...getState().search, running: false, response: null, error: errorMessage(error) },
     });
   }
+}
+
+/**
+ * Search runs on the files on disk; for files with unsaved changes the
+ * editor's text is what counts, so their results are recomputed from it.
+ */
+function withUnsavedEdits(response: SearchResponse, search: SearchState): SearchResponse {
+  const { tabs, settings, workspace } = getState();
+  if (!workspace) return response;
+  const matcher = buildMatcher(search);
+  const exclude = new GlobSet([
+    ...settings["files.exclude"],
+    ...settings["search.exclude"],
+    ...splitPatterns(search.exclude),
+  ]);
+  const include = new GlobSet(splitPatterns(search.include));
+  let results = response.results;
+  for (const tab of tabs) {
+    if (tab.kind !== "file" || !tab.path || !isDirty(tab.id)) continue;
+    const relativePath = paths.relative(workspace.root, tab.path);
+    if (relativePath === tab.path || exclude.matchesFileOrAncestor(relativePath)) continue;
+    if (!include.isEmpty && !include.matchesFileOrAncestor(relativePath)) continue;
+    const text = getEntry(tab.id)?.model.getValue() ?? "";
+    const matches = findMatches(text, new RegExp(matcher), 5000);
+    const index = results.findIndex((r) => paths.samePath(r.path, tab.path!));
+    const updated = { path: tab.path, relativePath, matches };
+    if (index !== -1) {
+      results = matches.length
+        ? results.map((r, i) => (i === index ? updated : r))
+        : results.filter((_, i) => i !== index);
+    } else if (matches.length) {
+      results = [...results, updated];
+    }
+  }
+  if (results === response.results) return response;
+  return { ...response, results, matchCount: results.reduce((n, r) => n + r.matches.length, 0) };
+}
+
+function searchQuery(search: SearchState): SearchQuery {
+  return {
+    pattern: search.pattern,
+    isRegex: search.isRegex,
+    caseSensitive: search.caseSensitive,
+    wholeWord: search.wholeWord,
+    include: search.include,
+    exclude: search.exclude,
+  };
+}
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/**
+ * Replaces the current search results (all files, or one). Files open in the
+ * editor are changed there (undo works, saving is up to the user); other files
+ * are changed on disk. Asks first.
+ */
+export async function replaceResults(onlyFile?: string): Promise<void> {
+  const { search, workspace } = getState();
+  if (!workspace || !search.pattern || !search.response) return;
+  const files = search.response.results.filter(
+    (r) => !onlyFile || paths.samePath(r.path, onlyFile),
+  );
+  const occurrences = files.reduce((total, file) => total + file.matches.length, 0);
+  if (!occurrences) return;
+  const choice = await api.invoke("app:confirm", {
+    type: "warning",
+    message: `Replace ${plural(occurrences, "occurrence")} in ${plural(files.length, "file")} with “${search.replacement}”?`,
+    detail:
+      "Files open in the editor are changed there, so you can undo and choose when to save. Other files are changed on disk.",
+    buttons: ["Replace", "Cancel"],
+    defaultId: 0,
+    cancelId: 1,
+  });
+  if (choice !== 0) return;
+
+  let replacements = 0;
+  let filesChanged = 0;
+  const onDisk: string[] = [];
+  try {
+    const matcher = buildMatcher(search);
+    for (const file of files) {
+      const tab = findFileTab(file.path);
+      const entry = tab ? getEntry(tab.id) : undefined;
+      if (!entry) {
+        onDisk.push(file.path);
+        continue;
+      }
+      const model = entry.model;
+      const { text, count } = replaceInText(
+        model.getValue(),
+        new RegExp(matcher),
+        search.replacement,
+        search.isRegex,
+      );
+      if (!count) continue;
+      model.pushEditOperations([], [{ range: model.getFullModelRange(), text }], () => null);
+      replacements += count;
+      filesChanged++;
+    }
+    if (onDisk.length) {
+      const result = await api.invoke(
+        "search:replace",
+        searchQuery(search),
+        search.replacement,
+        onDisk,
+      );
+      replacements += result.replacements;
+      filesChanged += result.filesChanged;
+      for (const failure of result.failed)
+        logOutput(`Replace failed in ${failure.path}: ${failure.message}`, "error");
+      if (result.failed.length) {
+        toast(
+          "error",
+          `Could not replace in ${plural(result.failed.length, "file")}`,
+          result.failed.map((f) => f.message).join("\n"),
+        );
+      }
+    }
+  } catch (error) {
+    reportError("Replace failed", error);
+  }
+  logOutput(
+    `Replaced ${plural(replacements, "occurrence")} of "${search.pattern}" in ${plural(filesChanged, "file")}`,
+  );
+  if (replacements)
+    toast(
+      "success",
+      `Replaced ${plural(replacements, "occurrence")} in ${plural(filesChanged, "file")}`,
+    );
+  await runSearch();
 }
 
 export function scheduleSearch(): void {

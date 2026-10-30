@@ -473,6 +473,13 @@ export const COMMANDS: Command[] = [
     run: () => createTerminal(),
   },
   {
+    id: "terminal.split",
+    title: "Split Terminal",
+    category: "Terminal",
+    keybinding: ["Mod+Shift+5"],
+    run: () => createTerminal({ split: true }),
+  },
+  {
     id: "terminal.kill",
     title: "Kill Active Terminal",
     category: "Terminal",

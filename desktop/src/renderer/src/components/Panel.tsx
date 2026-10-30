@@ -1,5 +1,6 @@
 import {
   CircleX,
+  Columns2,
   Info,
   Plus,
   SquareTerminal,
@@ -12,26 +13,59 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import { openFile } from "../actions/editor";
 import { clearActiveTerminal, createTerminal, killTerminal } from "../actions/terminal";
 import * as paths from "../lib/paths";
-import { setState, useStore, type PanelView } from "../state/store";
+import { setState, useStore, type PanelView, type TerminalState } from "../state/store";
 import { attachXterm, fitXterm, focusXterm } from "../terminal/xterm-manager";
+
+function TerminalPane({
+  terminal,
+  active,
+  split,
+}: {
+  terminal: TerminalState;
+  active: boolean;
+  split: boolean;
+}) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const { id } = terminal;
+
+  useLayoutEffect(() => {
+    if (hostRef.current) attachXterm(id, hostRef.current);
+  }, [id]);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const observer = new ResizeObserver(() => fitXterm(id));
+    observer.observe(host);
+    return () => observer.disconnect();
+  }, [id]);
+
+  return (
+    <div
+      className={`terminal-container${split && active ? " active-pane" : ""}`}
+      data-testid="terminal-pane"
+      onMouseDown={() => setState({ activeTerminalId: id })}
+      onClick={() => focusXterm(id)}
+    >
+      <div className="xterm-host" ref={hostRef} />
+      {terminal.exited && (
+        <div className="terminal-exited-banner">
+          Process exited (code {terminal.exitCode})
+          <button className="btn secondary" onClick={() => void killTerminal(id)}>
+            Close
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function TerminalPanel() {
   const terminals = useStore((s) => s.terminals);
   const activeId = useStore((s) => s.activeTerminalId);
-  const hostRef = useRef<HTMLDivElement>(null);
   const active = terminals.find((t) => t.id === activeId);
-
-  useLayoutEffect(() => {
-    if (activeId !== null && hostRef.current) attachXterm(activeId, hostRef.current);
-  }, [activeId]);
-
-  useEffect(() => {
-    const host = hostRef.current;
-    if (!host || activeId === null) return;
-    const observer = new ResizeObserver(() => fitXterm(activeId));
-    observer.observe(host);
-    return () => observer.disconnect();
-  }, [activeId]);
+  // The panes of the active split group, side by side.
+  const panes = active ? terminals.filter((t) => t.group === active.group) : [];
 
   if (!terminals.length) {
     return (
@@ -45,48 +79,52 @@ function TerminalPanel() {
 
   return (
     <>
-      <div
-        className="terminal-container"
-        data-testid="terminal"
-        onClick={() => activeId !== null && focusXterm(activeId)}
-      >
-        <div className="xterm-host" ref={hostRef} />
-        {active?.exited && (
-          <div className="terminal-exited-banner">
-            Process exited (code {active.exitCode})
-            <button className="btn secondary" onClick={() => void killTerminal(active.id)}>
-              Close
-            </button>
-          </div>
-        )}
+      <div className="terminal-group" data-testid="terminal">
+        {panes.map((t) => (
+          <TerminalPane
+            key={t.id}
+            terminal={t}
+            active={t.id === activeId}
+            split={panes.length > 1}
+          />
+        ))}
       </div>
       {terminals.length > 1 && (
         <div className="terminal-list" role="listbox" aria-label="Terminals">
-          {terminals.map((t) => (
-            <div
-              key={t.id}
-              role="option"
-              aria-selected={t.id === activeId}
-              className={`tree-row${t.id === activeId ? " selected" : ""}`}
-              onClick={() => setState({ activeTerminalId: t.id })}
-              title={`PID ${t.pid}`}
-            >
-              <SquareTerminal size={13} />
-              <span className={`name${t.exited ? " strike" : ""}`}>{t.title}</span>
-              <span className="row-actions">
-                <button
-                  className="icon-button"
-                  title="Kill Terminal"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void killTerminal(t.id);
-                  }}
-                >
-                  <Trash2 size={13} />
-                </button>
-              </span>
-            </div>
-          ))}
+          {terminals.map((t, index) => {
+            const inSplit = terminals.filter((other) => other.group === t.group).length > 1;
+            const firstOfGroup = terminals.findIndex((other) => other.group === t.group) === index;
+            return (
+              <div
+                key={t.id}
+                role="option"
+                aria-selected={t.id === activeId}
+                className={`tree-row${t.id === activeId ? " selected" : ""}`}
+                style={{ paddingLeft: inSplit && !firstOfGroup ? 26 : 10 }}
+                onClick={() => setState({ activeTerminalId: t.id })}
+                title={`PID ${t.pid}`}
+              >
+                {inSplit && !firstOfGroup ? (
+                  <span className="split-marker">└</span>
+                ) : (
+                  <SquareTerminal size={13} />
+                )}
+                <span className={`name${t.exited ? " strike" : ""}`}>{t.title}</span>
+                <span className="row-actions">
+                  <button
+                    className="icon-button"
+                    title="Kill Terminal"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void killTerminal(t.id);
+                    }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
     </>
@@ -181,6 +219,14 @@ export function Panel() {
               onClick={() => void createTerminal()}
             >
               <Plus size={15} />
+            </button>
+            <button
+              className="icon-button"
+              title="Split Terminal (Ctrl+Shift+5)"
+              aria-label="Split Terminal"
+              onClick={() => void createTerminal({ split: true })}
+            >
+              <Columns2 size={14} />
             </button>
             <button className="icon-button" title="Clear Terminal" onClick={clearActiveTerminal}>
               <Eraser size={14} />

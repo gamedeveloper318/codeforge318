@@ -11,6 +11,24 @@ export interface ReleaseNote {
 /** Human-written release notes, newest first. */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: "0.3.0",
+    date: "2026-10-30",
+    title: "Replace in files and split terminals",
+    summary:
+      "Search and replace across your whole project, and run terminals side by side. Installed 0.2.0 copies update to this version automatically.",
+    added: [
+      "Replace across files from the Search view, with a live preview of every change, Replace All or per-file replace, and a confirmation first. Regular-expression replacements support $1, $<name> and $&.",
+      "Files open in the editor are changed in the editor (undo with Ctrl+Z, save when you're ready); other files are changed on disk, keeping their encoding and line endings.",
+      "Search results now include unsaved changes in open files.",
+      "Split terminals: up to four real shells side by side (Ctrl+Shift+5 or the split button).",
+    ],
+    security: ["Replacing on disk is limited to the open folder, like every other file operation."],
+    knownLimitations: [
+      "Breakpoint debugging and language servers for Go, Rust, Java and C# are not included yet.",
+      "The installer is still not code-signed.",
+    ],
+  },
+  {
     version: "0.2.0",
     date: "2026-10-30",
     title: "Python IntelliSense and automatic updates",

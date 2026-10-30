@@ -109,7 +109,13 @@ const MENUS: { label: string; entries: MenuEntry[] }[] = [
   { label: "Run", entries: ["run.activeFile", "-", "run.previewHtml", "run.previewUrl"] },
   {
     label: "Terminal",
-    entries: ["terminal.new", "terminal.toggle", "terminal.clear", "terminal.kill"],
+    entries: [
+      "terminal.new",
+      "terminal.split",
+      "terminal.toggle",
+      "terminal.clear",
+      "terminal.kill",
+    ],
   },
   {
     label: "Help",
