@@ -1,14 +1,14 @@
 {
-  "version": "0.1.1",
-  "releaseDate": "2026-10-29",
+  "version": "0.2.0",
+  "releaseDate": "2026-10-30",
   "artifacts": [
     {
       "platform": "windows",
       "arch": "x64",
       "kind": "installer",
-      "file": "CodeForge-Setup-0.1.1-x64.exe",
-      "size": 125745705,
-      "sha256": "d39d68bb883489c73f20f0207ebd1e3c47ac0cb189b9c523def973c28b04411b"
+      "file": "CodeForge-Setup-0.2.0-x64.exe",
+      "size": 130147158,
+      "sha256": "c11d9ee3a225a79eeac1e3e874a679535f99d992d84757b341aaf888c0f9f7bb"
     }
   ]
 }
