@@ -11,6 +11,34 @@ export interface ReleaseNote {
 /** Human-written release notes, newest first. */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: "0.4.0",
+    date: "2026-10-31",
+    title: "Working menus, Run & Debug, Auto Save and smarter editing",
+    summary:
+      "Every menu works, programs run and debug from the Run menu, files save themselves, and the editor colors, checks and completes your code much more like VS Code. Installed copies update automatically.",
+    added: [
+      "Fixed: clicking an item in the File, Edit, Selection, View, Go, Run, Terminal or Help menu did nothing on Windows (the click was treated as dragging the window). Every menu item now works, with its keyboard shortcut shown, Alt+F / Alt+E / … to open menus from the keyboard, and a short explanation when an action isn't available.",
+      "New menu commands: File > Exit, Selection > Select Line and Shrink Selection, View > Zoom In / Zoom Out / Reset Zoom (Ctrl+= / Ctrl+- / Ctrl+0), Help > Documentation and a searchable Keyboard Shortcuts page.",
+      "Run > Run Current File (Ctrl+F5) runs Python, JavaScript, TypeScript, Java, PowerShell, shell, Ruby, PHP, Go, Lua and Dart files in a terminal and shows the exit code. Start Debugging (F5) opens Python files in pdb and JavaScript files in node inspect; Stop Running Program (Shift+F5) stops them. A missing runtime is explained with a download link instead of an error.",
+      "Terminal profiles: PowerShell, Command Prompt, PowerShell 7 and Git Bash (when installed), via Terminal > New Terminal With Profile… or the Default terminal setting.",
+      "Auto Save is on by default: files are saved one second after you stop typing (configurable, or switch it off in the status bar or File > Auto Save). The status bar shows Saving…, Saved, Unsaved or Save failed; a failed save keeps your changes and offers Retry without repeating the error.",
+      "Language icons for files in the Explorer, tabs, Go to File, search results and Problems (Python, JavaScript, TypeScript, React, HTML, CSS, JSON, Java, C, C++, C#, PHP, Ruby, Go, Rust, SQL, Markdown, XML, YAML and more); icons follow renames.",
+      "Richer syntax highlighting: function and method names, classes and types, parameters and properties get their own colors, in every language.",
+      "New checks in the Problems panel: code from the wrong language (for example Python print(…) written in an HTML page, or JavaScript outside a <script> tag) and unbalanced HTML tags. The Problems panel groups problems by file, filters by errors/warnings/info and jumps to the exact spot.",
+      "Smarter suggestions: JavaScript/TypeScript IntelliSense now sees every file in the project (imports, types and errors across files), Python suggestions rank the best match first (pri → print), and Java, C, C++, C#, Go, Rust, PHP, Ruby, SQL and more get keyword and snippet suggestions.",
+      "Change the language of a file from the status bar; files without an extension are recognised from their first line (#!/usr/bin/env python3, <!DOCTYPE html>, …).",
+    ],
+    security: [
+      "Run and Start Debugging only send the file's path to the app's main process, which picks the program and its arguments itself; the page cannot start arbitrary programs.",
+      "Terminal profiles are detected on this computer; the page can only choose one of them by name.",
+    ],
+    knownLimitations: [
+      "Debugging uses each language's own terminal debugger (pdb, node inspect); breakpoints in the editor gutter are not available yet.",
+      "Java, C, C++, C#, Go, Rust, PHP and Ruby get keyword, snippet and word suggestions; full IntelliSense for them needs their language servers, which are not included yet.",
+      "The installer is still not code-signed.",
+    ],
+  },
+  {
     version: "0.3.0",
     date: "2026-10-30",
     title: "Replace in files and split terminals",

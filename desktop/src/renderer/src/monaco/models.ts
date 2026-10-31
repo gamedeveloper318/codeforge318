@@ -1,4 +1,4 @@
-import { languageForPath } from "@shared/languages";
+import { languageForFile } from "@shared/languages";
 import { monaco } from "./setup";
 
 /**
@@ -47,7 +47,11 @@ export function createFileModel(
 ): ModelEntry {
   const uri = monaco.Uri.file(path);
   monaco.editor.getModel(uri)?.dispose();
-  return track(tabId, monaco.editor.createModel(content, languageForPath(path), uri), meta);
+  return track(
+    tabId,
+    monaco.editor.createModel(content, languageForFile(path, content), uri),
+    meta,
+  );
 }
 
 export function createUntitledModel(): { tabId: string; title: string; entry: ModelEntry } {
@@ -69,10 +73,14 @@ export function isDirty(tabId: string): boolean {
   return Boolean(entry && entry.model.getAlternativeVersionId() !== entry.savedVersion);
 }
 
-export function markSaved(tabId: string, meta?: { mtimeMs: number }): void {
+/**
+ * Records a successful save. `version` is the text version that was written;
+ * edits made while the write was in progress keep the file dirty.
+ */
+export function markSaved(tabId: string, meta?: { mtimeMs: number }, version?: number): void {
   const entry = entries.get(tabId);
   if (!entry) return;
-  entry.savedVersion = entry.model.getAlternativeVersionId();
+  entry.savedVersion = version ?? entry.model.getAlternativeVersionId();
   if (meta) entry.mtimeMs = meta.mtimeMs;
 }
 

@@ -5,7 +5,14 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import type { LspMessage } from "@shared/ipc";
-import { encodeMessage, LspBridge, LspService, MessageReader } from "../../src/main/lsp-service";
+import {
+  applyContentChanges,
+  encodeMessage,
+  LspBridge,
+  LspService,
+  MessageReader,
+  withWordRanges,
+} from "../../src/main/lsp-service";
 
 describe("MessageReader / encodeMessage", () => {
   it("reassembles messages split across chunks, including multi-byte text", () => {
@@ -41,6 +48,71 @@ describe("LspBridge", () => {
     jsonrpc: "2.0",
     method: "textDocument/didOpen",
     params: { textDocument: { uri, languageId, version: 1, text: "x = 1" } },
+  });
+
+  it("gives completion items the range of the typed word, so the best match ranks first", () => {
+    const { b, client } = bridge();
+    const uri = "file:///c%3A/work/proj/app.py";
+    b.fromClient({
+      ...open(uri),
+      params: { textDocument: { uri, languageId: "python", text: "x = 1\n" } },
+    });
+    // The user types "pri" on line 2 (an incremental edit, as the editor sends it).
+    b.fromClient({
+      jsonrpc: "2.0",
+      method: "textDocument/didChange",
+      params: {
+        textDocument: { uri, version: 2 },
+        contentChanges: [
+          {
+            range: { start: { line: 1, character: 0 }, end: { line: 1, character: 0 } },
+            text: "pri",
+          },
+        ],
+      },
+    });
+    b.fromClient({
+      jsonrpc: "2.0",
+      id: 7,
+      method: "textDocument/completion",
+      params: { textDocument: { uri }, position: { line: 1, character: 3 } },
+    });
+    const keep = {
+      range: { start: { line: 1, character: 0 }, end: { line: 1, character: 3 } },
+      newText: "x",
+    };
+    b.fromServer({
+      jsonrpc: "2.0",
+      id: 7,
+      result: {
+        isIncomplete: false,
+        items: [
+          { label: "ProfileFunction" },
+          { label: "print", insertText: "print" },
+          { label: "x", textEdit: keep },
+        ],
+      },
+    });
+    const items = (client.at(-1)!.result as { items: { label: string; textEdit: unknown }[] })
+      .items;
+    const wordRange = { start: { line: 1, character: 0 }, end: { line: 1, character: 3 } };
+    expect(items[0].textEdit).toEqual({ range: wordRange, newText: "ProfileFunction" });
+    expect(items[1].textEdit).toEqual({ range: wordRange, newText: "print" });
+    expect(items[2].textEdit).toBe(keep);
+  });
+
+  it("tracks document text through full and incremental changes", () => {
+    const at = (line: number, character: number) => ({ line, character });
+    let text = applyContentChanges("hello\nworld", [
+      { range: { start: at(1, 0), end: at(1, 5) }, text: "there" },
+    ]);
+    expect(text).toBe("hello\nthere");
+    text = applyContentChanges(text, [
+      { range: { start: at(0, 5), end: at(0, 5) }, text: ",\nmy" },
+    ]);
+    expect(text).toBe("hello,\nmy\nthere");
+    expect(applyContentChanges(text, [{ text: "replaced" }])).toBe("replaced");
+    expect(withWordRanges(null, "", at(0, 0))).toBeNull();
   });
 
   it("tells the server which folder is open", () => {

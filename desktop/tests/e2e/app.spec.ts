@@ -365,7 +365,7 @@ test("splits the terminal into side-by-side real shells", async () => {
   await expect(panes.nth(0).locator(".xterm-rows")).not.toContainText("pane-42");
 
   await page.keyboard.press("Control+Shift+P");
-  await page.keyboard.type("kill active terminal");
+  await page.keyboard.type("close terminal");
   await page.keyboard.press("Enter");
   await expect(panes).toHaveCount(1);
 });

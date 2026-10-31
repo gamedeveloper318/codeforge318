@@ -144,10 +144,22 @@ function themeOf(current: Settings): "dark" | "light" {
   return current["workbench.colorTheme"] === "codeforge-light" ? "light" : "dark";
 }
 
+/** Window controls overlay for the theme, as tall as the (zoomed) title bar. */
+function titleBarOverlay(current: Settings): Electron.TitleBarOverlayOptions {
+  const zoomFactor = Math.pow(1.2, current["window.zoomLevel"]);
+  const overlay = TITLE_BAR[themeOf(current)];
+  return { ...overlay, height: Math.round(overlay.height * zoomFactor) };
+}
+
+/** View > Zoom In / Zoom Out / Reset Zoom scale the whole window. */
+function applyZoom(win: BrowserWindow, current: Settings): void {
+  win.webContents.setZoomLevel(current["window.zoomLevel"]);
+  if (process.platform !== "darwin") win.setTitleBarOverlay(titleBarOverlay(current));
+}
+
 function applySettings(next: Settings): void {
-  const theme = themeOf(next);
-  nativeTheme.themeSource = theme;
-  if (mainWindow && process.platform !== "darwin") mainWindow.setTitleBarOverlay(TITLE_BAR[theme]);
+  nativeTheme.themeSource = themeOf(next);
+  if (mainWindow) applyZoom(mainWindow, next);
   if (!next["python.languageServer"]) pythonLsp.stop();
   send("settings:changed", next);
 }
@@ -227,7 +239,7 @@ function createMainWindow(): BrowserWindow {
     title: "CodeForge",
     backgroundColor: theme === "dark" ? "#070a13" : "#f7f8fb",
     titleBarStyle: "hidden",
-    titleBarOverlay: process.platform === "darwin" ? undefined : TITLE_BAR[theme],
+    titleBarOverlay: process.platform === "darwin" ? undefined : titleBarOverlay(settings()),
     trafficLightPosition: { x: 14, y: 11 },
     icon: app.isPackaged ? undefined : path.join(__dirname, "../../build/icon.png"),
     webPreferences: {
@@ -244,6 +256,7 @@ function createMainWindow(): BrowserWindow {
 
   if (state.state.get().window.maximized) win.maximize();
   win.once("ready-to-show", () => win.show());
+  win.webContents.on("did-finish-load", () => applyZoom(win, settings()));
 
   // Never navigate the editor window away from CodeForge's own UI.
   win.webContents.on("will-navigate", (event, url) => {

@@ -31,7 +31,7 @@ export const HIGHLIGHTS: Feature[] = [
     id: "terminal",
     title: "A real integrated terminal",
     summary:
-      "Real shell processes through ConPTY — PowerShell, cmd or Git Bash — with multiple sessions and copy/paste.",
+      "Real shells through ConPTY — PowerShell, Command Prompt, PowerShell 7 or Git Bash — with multiple and split sessions.",
     icon: "terminal",
   },
   {
@@ -59,21 +59,21 @@ export const HIGHLIGHTS: Feature[] = [
     id: "intelligence",
     title: "Language intelligence",
     summary:
-      "Completion, errors, hover and go to definition for Python (Pyright), TypeScript, JavaScript, JSON, CSS and HTML; highlighting for 70+ file types.",
+      "Completion, errors, hover and go to definition for Python (Pyright), TypeScript, JavaScript, JSON, CSS and HTML; wrong-language and HTML tag checks; keyword and snippet suggestions for Java, C++, Go, Rust and more.",
     icon: "brain",
   },
   {
     id: "run",
-    title: "Run & preview",
+    title: "Run, debug & preview",
     summary:
-      "Run the current file or npm scripts in one click and preview HTML or localhost servers in a sandboxed window.",
+      "Run the current file or npm scripts, debug Python (pdb) and JavaScript (node inspect), and preview HTML or localhost servers.",
     icon: "play",
   },
   {
     id: "files",
     title: "Safe file management",
     summary:
-      "Create, rename, drag to move and delete to the Recycle Bin, with prompts before you lose unsaved work.",
+      "Language icons, Auto Save, create, rename, drag to move and delete to the Recycle Bin, with prompts before you lose unsaved work.",
     icon: "folder",
   },
   {
@@ -106,7 +106,7 @@ export const SUPPORT_MATRIX: MatrixRow[] = [
   },
   {
     area: "Editor",
-    capability: "Auto save and format on save",
+    capability: "Auto save (on by default) and format on save",
     status: "available",
     note: "Formatting for JS/TS/JSON/CSS/HTML",
   },
@@ -117,6 +117,7 @@ export const SUPPORT_MATRIX: MatrixRow[] = [
     status: "available",
   },
   { area: "Files", capability: "Recent folders, reopen last folder", status: "available" },
+  { area: "Files", capability: "Language file icons in explorer and tabs", status: "available" },
   { area: "Search", capability: "Project-wide text and regex search", status: "available" },
   {
     area: "Search",
@@ -129,6 +130,12 @@ export const SUPPORT_MATRIX: MatrixRow[] = [
     capability: "Real shells, multiple sessions, resize, copy/paste",
     status: "available",
   },
+  {
+    area: "Terminal",
+    capability: "Profiles: PowerShell, Command Prompt, PowerShell 7, Git Bash",
+    status: "available",
+    note: "PowerShell 7 and Git Bash when installed",
+  },
   { area: "Terminal", capability: "Split terminals (up to 4 side by side)", status: "available" },
   { area: "Git", capability: "Status, stage, unstage, discard, diff, commit", status: "available" },
   {
@@ -138,12 +145,26 @@ export const SUPPORT_MATRIX: MatrixRow[] = [
     note: "Uses your Git credentials",
   },
   { area: "Git", capability: "Merge conflict editor, blame, history graph", status: "planned" },
-  { area: "Languages", capability: "Syntax highlighting (70+ file types)", status: "available" },
+  {
+    area: "Languages",
+    capability: "Syntax highlighting (70+ file types) with function, class and parameter colors",
+    status: "available",
+  },
   {
     area: "Languages",
     capability: "TypeScript / JavaScript intelligence",
     status: "partial",
-    note: "Works across open files; no node_modules type resolution yet",
+    note: "Works across all project files; no node_modules type resolution yet",
+  },
+  {
+    area: "Languages",
+    capability: "Problems: wrong-language code and unbalanced HTML tags",
+    status: "available",
+  },
+  {
+    area: "Languages",
+    capability: "Keyword and snippet suggestions for Java, C/C++, C#, Go, Rust, PHP, Ruby, SQL",
+    status: "available",
   },
   {
     area: "Languages",
@@ -160,18 +181,25 @@ export const SUPPORT_MATRIX: MatrixRow[] = [
     area: "Languages",
     capability: "Language servers for Go, Rust, Java, C#…",
     status: "planned",
+    note: "Full IntelliSense for these languages",
   },
   {
     area: "Run",
-    capability: "Run active file, npm scripts",
+    capability: "Run current file, stop it, npm scripts",
     status: "available",
-    note: "Requires the language runtime installed",
+    note: "Requires the language runtime installed; CodeForge tells you which",
   },
   { area: "Run", capability: "Sandboxed HTML and localhost preview", status: "available" },
-  { area: "Debugging", capability: "Breakpoints and step debugging", status: "planned" },
+  {
+    area: "Debugging",
+    capability: "Step debugging in the terminal (pdb, node inspect)",
+    status: "available",
+    note: "Python and JavaScript",
+  },
+  { area: "Debugging", capability: "Breakpoints in the editor gutter", status: "planned" },
   {
     area: "Customization",
-    capability: "Dark & light themes, settings UI, keyboard shortcuts",
+    capability: "Dark & light themes, window zoom, settings UI, keyboard shortcuts page",
     status: "available",
   },
   {

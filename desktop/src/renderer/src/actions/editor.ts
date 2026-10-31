@@ -1,4 +1,5 @@
-import { api } from "../lib/bridge";
+import { AutoSaveScheduler, type AutoSaveResult } from "@shared/autosave";
+import { api, errorMessage } from "../lib/bridge";
 import * as paths from "../lib/paths";
 import { getActiveEditor } from "../monaco/editor-ref";
 import {
@@ -13,19 +14,114 @@ import {
   rekeyEntry,
   reloadContent,
 } from "../monaco/models";
-import { getState, setState, type Tab } from "../state/store";
+import { getState, setState, useStore, type Tab, type WorkbenchState } from "../state/store";
 import { logOutput, reportError, toast } from "./notify";
 
 type FileTab = Extract<Tab, { kind: "file" }>;
 
-interface PendingReveal {
+export interface PendingReveal {
   line: number;
   column: number;
+  endLine?: number;
   endColumn?: number;
 }
 const pendingReveals = new Map<string, PendingReveal>();
 const preserveFocus = new Set<string>();
-const autoSaveTimers = new Map<string, number>();
+/** Why the last save of a file failed (shown in the status bar tooltip). */
+const saveErrors = new Map<string, string>();
+
+function fileTab(tabId: string): FileTab | undefined {
+  const tab = getState().tabs.find((t) => t.id === tabId);
+  return tab?.kind === "file" ? tab : undefined;
+}
+
+function setSaveState(tabId: string, value: WorkbenchState["saveState"][string] | null): void {
+  const { saveState } = getState();
+  if (saveState[tabId] === value) return;
+  const { [tabId]: _old, ...rest } = saveState;
+  setState({ saveState: value ? { ...rest, [tabId]: value } : rest });
+}
+
+export function lastSaveError(tabId: string): string | undefined {
+  return saveErrors.get(tabId);
+}
+
+const autoSave = new AutoSaveScheduler({
+  enabled: () => getState().settings["files.autoSave"] === "afterDelay",
+  delay: () => getState().settings["files.autoSaveDelay"],
+  canAutoSave: (tabId) => Boolean(fileTab(tabId)?.path),
+  isDirty,
+  version: (tabId) => getEntry(tabId)?.model.getAlternativeVersionId() ?? -1,
+  save: autoSaveTab,
+  failed: (tabId, result) => {
+    const tab = fileTab(tabId);
+    if (!tab) return;
+    toast(
+      "error",
+      `Auto Save couldn't save ${tab.title}`,
+      result === "conflict"
+        ? `${tab.title} was changed by another program after you opened it, so it wasn't overwritten. Your changes are still in the editor: press Ctrl+S to overwrite the file with them.`
+        : `${saveErrors.get(tabId) ?? "The file could not be written."} Your changes are still in the editor; Auto Save tries again after your next edit.`,
+      [{ label: "Retry", run: () => void saveTab(tabId) }],
+    );
+  },
+  setTimer: (callback, ms) => window.setTimeout(callback, ms),
+  clearTimer: (handle) => window.clearTimeout(handle as number),
+});
+
+/**
+ * Writes a file for Auto Save. Unlike a manual save it never asks anything:
+ * no formatting (it would move the cursor while typing) and no overwrite
+ * prompt when the file changed on disk (that is reported as a conflict).
+ */
+async function autoSaveTab(tabId: string): Promise<AutoSaveResult> {
+  const tab = fileTab(tabId);
+  const entry = getEntry(tabId);
+  if (!tab?.path || !entry) return "skipped";
+  const version = entry.model.getAlternativeVersionId();
+  const text = entry.model.getValue();
+  setSaveState(tabId, "saving");
+  try {
+    if (entry.mtimeMs) {
+      const onDisk = await api.invoke("fs:stat", tab.path).catch(() => null);
+      if (onDisk && onDisk.mtimeMs > entry.mtimeMs + 1) {
+        saveErrors.set(tabId, "The file was changed on disk by another program.");
+        setSaveState(tabId, "failed");
+        return "conflict";
+      }
+    }
+    const result = await api.invoke("fs:write-file", tab.path, text, entry.bom);
+    // The tab may have been closed or renamed while the file was being written.
+    if (getEntry(tabId) !== entry || entry.model.isDisposed()) return "saved";
+    markSaved(tabId, result, version);
+    saveErrors.delete(tabId);
+    setDirtyFlag(tabId, isDirty(tabId));
+    setSaveState(tabId, "saved");
+    return "saved";
+  } catch (error) {
+    saveErrors.set(tabId, errorMessage(error));
+    if (getEntry(tabId) === entry) setSaveState(tabId, "failed");
+    logOutput(`Auto Save failed for ${tab.path}: ${errorMessage(error)}`, "error");
+    return "failed";
+  }
+}
+
+/** Saves every file Auto Save is waiting for (before closing a tab or the window). */
+async function flushAutoSave(tabIds: string[]): Promise<void> {
+  if (getState().settings["files.autoSave"] !== "afterDelay") return;
+  for (const tabId of tabIds) {
+    autoSave.cancel(tabId);
+    await autoSave.flush(tabId);
+  }
+}
+
+// Turning Auto Save on saves files that already have changes; turning it off stops pending saves.
+useStore.subscribe((state, previous) => {
+  const on = state.settings["files.autoSave"] === "afterDelay";
+  if (on === (previous.settings["files.autoSave"] === "afterDelay")) return;
+  if (!on) autoSave.cancelAll();
+  else for (const tab of state.tabs) if (isDirty(tab.id)) autoSave.changed(tab.id);
+});
 
 /** Called by the editor component after it switches to a tab's model. */
 export function takePendingReveal(tabId: string): PendingReveal | undefined {
@@ -68,12 +164,11 @@ function reveal(tabId: string, target: PendingReveal): void {
   const editor = getActiveEditor();
   const entry = getEntry(tabId);
   if (editor && entry && editor.getModel() === entry.model) {
-    const endColumn = target.endColumn ?? target.column;
     editor.setSelection({
       startLineNumber: target.line,
       startColumn: target.column,
-      endLineNumber: target.line,
-      endColumn,
+      endLineNumber: target.endLine ?? target.line,
+      endColumn: target.endColumn ?? target.column,
     });
     editor.revealLineInCenterIfOutsideViewport(target.line);
     editor.focus();
@@ -130,6 +225,12 @@ export function openSettingsTab(): void {
   else insertTab({ kind: "settings", id: "settings", title: "Settings" });
 }
 
+/** Help > Keyboard Shortcuts: every command with its shortcut, searchable. */
+export function openShortcutsTab(): void {
+  if (getState().tabs.some((t) => t.id === "shortcuts")) setState({ activeTabId: "shortcuts" });
+  else insertTab({ kind: "shortcuts", id: "shortcuts", title: "Keyboard Shortcuts" });
+}
+
 export function openDiff(path: string, staged: boolean): void {
   const id = `diff:${staged ? "index" : "working"}:${path}`;
   if (getState().tabs.some((t) => t.id === id)) {
@@ -148,17 +249,7 @@ function setDirtyFlag(tabId: string, value: boolean): void {
 
 onModelContentChange((tabId) => {
   setDirtyFlag(tabId, isDirty(tabId));
-  const { settings, tabs } = getState();
-  const tab = tabs.find((t) => t.id === tabId);
-  if (settings["files.autoSave"] !== "afterDelay" || tab?.kind !== "file" || !tab.path) return;
-  window.clearTimeout(autoSaveTimers.get(tabId));
-  autoSaveTimers.set(
-    tabId,
-    window.setTimeout(() => {
-      autoSaveTimers.delete(tabId);
-      if (isDirty(tabId)) void saveTab(tabId);
-    }, settings["files.autoSaveDelay"]),
-  );
+  autoSave.changed(tabId);
 });
 
 /** Saves a file tab. Returns the tab's (possibly new) id, or null if not saved. */
@@ -184,6 +275,7 @@ export async function saveTab(tabId: string, saveAs = false): Promise<string | n
       .catch(() => undefined);
   }
 
+  autoSave.cancel(tabId);
   try {
     if (tab.path && paths.samePath(target, tab.path) && entry.mtimeMs) {
       // Don't silently overwrite edits made outside CodeForge.
@@ -201,18 +293,25 @@ export async function saveTab(tabId: string, saveAs = false): Promise<string | n
       }
     }
 
+    setSaveState(tabId, "saving");
+    const version = entry.model.getAlternativeVersionId();
     const result = await api.invoke("fs:write-file", target, entry.model.getValue(), entry.bom);
     logOutput(`Saved ${target}`);
+    saveErrors.delete(tabId);
+    autoSave.savedManually(tabId);
 
     if (tab.path && paths.samePath(target, tab.path)) {
-      markSaved(tabId, result);
-      setDirtyFlag(tabId, false);
+      markSaved(tabId, result, version);
+      setDirtyFlag(tabId, isDirty(tabId));
+      setSaveState(tabId, "saved");
       return tabId;
     }
 
     // Untitled -> file, or Save As to a different path: the tab moves to the new path.
     const other = findFileTab(target);
     if (other && other.id !== tabId) forceRemoveTab(other.id);
+    autoSave.forget(tabId);
+    setSaveState(tabId, null);
     rekeyEntry(tabId, target, target, false);
     markSaved(target, result);
     const { tabs, activeTabId, dirty } = getState();
@@ -226,16 +325,28 @@ export async function saveTab(tabId: string, saveAs = false): Promise<string | n
       activeTabId: activeTabId === tabId ? target : activeTabId,
       dirty: { ...restDirty, [target]: false },
     });
+    setSaveState(target, "saved");
     return target;
   } catch (error) {
+    saveErrors.set(tabId, errorMessage(error));
+    setSaveState(tabId, "failed");
     reportError(`Could not save ${tab.title}`, error);
     return null;
   }
 }
 
 export async function saveActive(saveAs = false): Promise<void> {
-  const { activeTabId } = getState();
-  if (activeTabId) await saveTab(activeTabId, saveAs);
+  const { activeTabId, tabs } = getState();
+  const tab = tabs.find((t) => t.id === activeTabId);
+  if (tab?.kind !== "file") {
+    toast(
+      "info",
+      saveAs ? "Save As needs an open file" : "There is no open file to save",
+      "Open or create a file in the editor first.",
+    );
+    return;
+  }
+  await saveTab(tab.id, saveAs);
 }
 
 export async function saveAll(): Promise<boolean> {
@@ -254,16 +365,22 @@ function forceRemoveTab(tabId: string): void {
   const active =
     activeTabId === tabId ? (next[Math.min(index, next.length - 1)]?.id ?? null) : activeTabId;
   if (tab.kind === "file") disposeEntry(tabId);
-  window.clearTimeout(autoSaveTimers.get(tabId));
+  autoSave.forget(tabId);
+  saveErrors.delete(tabId);
   const { [tabId]: _removed, ...restDirty } = dirty;
-  setState({ tabs: next, activeTabId: active, dirty: restDirty });
+  const { [tabId]: _state, ...restSaveState } = getState().saveState;
+  setState({ tabs: next, activeTabId: active, dirty: restDirty, saveState: restSaveState });
 }
 
-/** Closes a tab, asking to save unsaved changes first. Returns false if cancelled. */
+/**
+ * Closes a tab. With Auto Save on, its changes are saved first (like VS Code);
+ * otherwise, or if that fails, it asks. Returns false if cancelled.
+ */
 export async function closeTab(tabId: string): Promise<boolean> {
   const tab = getState().tabs.find((t) => t.id === tabId);
   if (!tab) return true;
   let currentId = tabId;
+  if (tab.kind === "file" && isDirty(tabId)) await flushAutoSave([tabId]);
   if (tab.kind === "file" && isDirty(tabId)) {
     const choice = await api.invoke("app:confirm", {
       type: "warning",
@@ -300,6 +417,12 @@ export async function closeTabs(filter: (tab: Tab) => boolean): Promise<void> {
  * file. Returns false when the user cancels.
  */
 export async function confirmUnsavedChanges(): Promise<boolean> {
+  // With Auto Save on, files waiting for their save are saved now instead of asking.
+  await flushAutoSave(
+    getState()
+      .tabs.filter((t) => isDirty(t.id))
+      .map((t) => t.id),
+  );
   const dirtyTabs = getState().tabs.filter((t) => t.kind === "file" && isDirty(t.id));
   if (!dirtyTabs.length) return true;
   const list = dirtyTabs
@@ -324,8 +447,12 @@ export async function confirmUnsavedChanges(): Promise<boolean> {
 
 /** Closes every tab without prompting (after confirmUnsavedChanges). */
 export function resetTabs(): void {
-  for (const [tabId] of allEntries()) disposeEntry(tabId);
-  setState({ tabs: [], activeTabId: null, dirty: {}, editorStatus: null });
+  for (const [tabId] of allEntries()) {
+    autoSave.forget(tabId);
+    disposeEntry(tabId);
+  }
+  saveErrors.clear();
+  setState({ tabs: [], activeTabId: null, dirty: {}, saveState: {}, editorStatus: null });
 }
 
 /** Keeps open tabs pointing at the right file after a rename or move. */
@@ -344,6 +471,7 @@ export function retargetTabs(oldPath: string, newPath: string): void {
       continue;
     }
     const movedPath = newPath + tab.path.slice(oldPath.length);
+    autoSave.forget(tab.id);
     rekeyEntry(tab.id, movedPath, movedPath, true);
     nextDirty[movedPath] = isDirty(movedPath);
     delete nextDirty[tab.id];
@@ -360,6 +488,8 @@ export function retargetTabs(oldPath: string, newPath: string): void {
     activeTabId: nextActive ?? nextTabs[0]?.id ?? null,
     dirty: nextDirty,
   });
+  // Unsaved changes of moved files are auto saved at their new path.
+  for (const tab of nextTabs) if (nextDirty[tab.id]) autoSave.changed(tab.id);
 }
 
 /** Closes tabs for files that were deleted (inside `deletedPath`). */

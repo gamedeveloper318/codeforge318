@@ -162,6 +162,35 @@ export const DOCS: DocPage[] = [
           </li>
           <li>Closing the window or switching folders also asks before discarding unsaved work.</li>
         </ul>
+        <h2>Auto Save</h2>
+        <p>
+          Auto Save is on by default: a file is saved one second after you stop typing, so you
+          rarely need <K>Ctrl+S</K>. The status bar shows <strong>Saving…</strong>,{" "}
+          <strong>Saved</strong>, <strong>● Unsaved</strong> or <strong>Save failed</strong> for the
+          file you are editing. Click <strong>Auto Save: On</strong> in the status bar (or use{" "}
+          <em>File → Auto Save</em>) to switch it off; change the delay with the{" "}
+          <code>files.autoSaveDelay</code> setting.
+        </p>
+        <ul>
+          <li>Untitled files are never auto saved — save them once with a name first.</li>
+          <li>
+            If a save fails (for example the file is read-only), your changes stay in the editor, a
+            single notification explains why and offers <strong>Retry</strong>, and Auto Save tries
+            again after your next edit — it doesn&apos;t retry in a loop.
+          </li>
+          <li>
+            If another program changed the file, Auto Save doesn&apos;t overwrite it; press{" "}
+            <K>Ctrl+S</K> to decide.
+          </li>
+        </ul>
+        <h2>File icons and languages</h2>
+        <p>
+          Files show the icon of their language (Python, JavaScript, HTML, CSS, JSON, Java, C++, Go,
+          Rust and many more) in the Explorer, tabs, Go to File, search results and Problems. The
+          icon and the syntax highlighting follow the file name, so renaming <code>test.txt</code>{" "}
+          to <code>test.py</code> turns it into a Python file. Click the language name in the status
+          bar to change a file&apos;s language manually.
+        </p>
         <h2>Changes made outside CodeForge</h2>
         <p>
           If a file you have open (without unsaved changes) is modified by another program — for
@@ -229,6 +258,18 @@ export const DOCS: DocPage[] = [
               <td>Toggle word wrap</td>
               <td>
                 <K>Alt+Z</K>
+              </td>
+            </tr>
+            <tr>
+              <td>Select line / expand / shrink selection</td>
+              <td>
+                <K>Ctrl+L</K> / <K>Shift+Alt+Right</K> / <K>Shift+Alt+Left</K>
+              </td>
+            </tr>
+            <tr>
+              <td>Zoom the window in / out / reset</td>
+              <td>
+                <K>Ctrl+=</K> / <K>Ctrl+-</K> / <K>Ctrl+0</K>
               </td>
             </tr>
           </tbody>
@@ -379,8 +420,23 @@ export const DOCS: DocPage[] = [
         </p>
         <h2>Choosing a shell</h2>
         <p>
-          By default CodeForge starts Windows PowerShell. To use something else, set{" "}
-          <code>terminal.shell</code> in Settings, for example:
+          New terminals use Windows PowerShell by default.{" "}
+          <em>Terminal → New Terminal With Profile…</em> (or the arrow next to <strong>+</strong> in
+          the terminal toolbar) starts any shell CodeForge found on your computer:{" "}
+          <strong>PowerShell</strong>, <strong>Command Prompt</strong>, and{" "}
+          <strong>PowerShell 7</strong> and <strong>Git Bash</strong> when they are installed. The
+          terminal list shows which shell each terminal runs.
+        </p>
+        <h2>Terminal menu</h2>
+        <p>
+          <em>New Terminal</em>, <em>Split Terminal</em>, <em>Clear Terminal</em> (clears the screen
+          and scrollback) and <em>Close Terminal</em> (ends the shell) act on the active terminal.
+        </p>
+        <h2>Default and custom shells</h2>
+        <p>
+          Pick a <strong>Default terminal</strong> in Settings. To use any other shell program,
+          enter its full path in <strong>Custom shell path</strong> (<code>terminal.shell</code>),
+          for example:
         </p>
         <pre>
           <code>{`cmd.exe
@@ -449,10 +505,12 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
     section: "Using CodeForge",
     body: (
       <>
-        <h2>Run the active file</h2>
+        <h2>Run the current file</h2>
         <p>
-          Open the Run view (<K>Ctrl+Shift+D</K>) or press <K>Ctrl+F5</K>. CodeForge saves the file
-          and runs it in a new terminal, so you can see exactly what was executed:
+          Choose <em>Run → Run Current File</em>, press <K>Ctrl+F5</K> or use the Run and Debug view
+          (<K>Ctrl+Shift+D</K>). CodeForge saves the file and runs it in its own terminal, which
+          shows the command, the program&apos;s output (you can type input too) and its exit code
+          when it ends. Running the same file again replaces the previous run.
         </p>
         <table>
           <thead>
@@ -493,6 +551,12 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
               </td>
             </tr>
             <tr>
+              <td>Java (JDK 11 or newer)</td>
+              <td>
+                <code>java Main.java</code>
+              </td>
+            </tr>
+            <tr>
               <td>Ruby, PHP, Go, Lua, Dart</td>
               <td>
                 <code>ruby</code>, <code>php</code>, <code>go run</code>, <code>lua</code>,{" "}
@@ -502,8 +566,16 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
           </tbody>
         </table>
         <p>
-          The language runtime must be installed and on your PATH. Nothing runs unless you click
-          Run.
+          The language runtime must be installed. CodeForge checks before running: if Python,
+          Node.js or another runtime is missing, it tells you what to install and offers a download
+          link instead of failing in the terminal. Files that need a build step first (C, C++, C#,
+          Rust) get a short explanation of how to build them. HTML files open in the preview.
+          Nothing runs unless you ask for it.
+        </p>
+        <h2>Stop a running program</h2>
+        <p>
+          <em>Run → Stop Running Program</em> (<K>Shift+F5</K>) sends <K>Ctrl+C</K> to the program
+          and ends it if it is still running a moment later.
         </p>
         <h2>npm scripts</h2>
         <p>
@@ -528,10 +600,67 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
         </p>
         <h2>Debugging</h2>
         <p>
-          Breakpoint debugging isn&apos;t available yet. Until it is, use your language&apos;s
-          debugger from the terminal, such as <code>node --inspect</code> or{" "}
-          <code>python -m pdb</code>.
+          <em>Run → Start Debugging</em> (<K>F5</K>) starts the language&apos;s own debugger in a
+          terminal: <code>python -m pdb</code> for Python files and <code>node inspect</code> for
+          JavaScript files. The debugger stops at the first line; then type commands:
         </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th>pdb (Python)</th>
+              <th>node inspect (JavaScript)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Next line / step into</td>
+              <td>
+                <code>n</code> / <code>s</code>
+              </td>
+              <td>
+                <code>n</code> / <code>s</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Continue</td>
+              <td>
+                <code>c</code>
+              </td>
+              <td>
+                <code>c</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Breakpoint at line 12</td>
+              <td>
+                <code>b 12</code>
+              </td>
+              <td>
+                <code>setBreakpoint(12)</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Show a variable</td>
+              <td>
+                <code>p name</code>
+              </td>
+              <td>
+                <code>exec name</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Quit</td>
+              <td>
+                <code>q</code>
+              </td>
+              <td>
+                <code>.exit</code>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p>Breakpoints in the editor gutter are not available yet.</p>
       </>
     ),
   },
@@ -582,17 +711,60 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
               <td>Tag and attribute completion, tag matching, formatting</td>
             </tr>
             <tr>
+              <td>
+                Java, C, C++, C#, Go, Rust, PHP, Ruby, SQL, Kotlin, Swift, Dart, Lua, R, Shell,
+                PowerShell
+              </td>
+              <td>
+                Keyword, built-in and snippet suggestions (for example <code>main</code>,{" "}
+                <code>for</code>, <code>class</code>), plus words from your open files
+              </td>
+            </tr>
+            <tr>
               <td>Everything else</td>
               <td>Highlighting, bracket matching, folding, word-based completion</td>
             </tr>
           </tbody>
         </table>
+        <p>
+          Suggestions appear while you type: use the arrow keys to choose, <K>Enter</K> or{" "}
+          <K>Tab</K> to accept and <K>Esc</K> to close the list. <K>Ctrl+Space</K> opens it on
+          demand.
+        </p>
+        <h2>Highlighting</h2>
+        <p>
+          Besides keywords, strings, numbers and comments, CodeForge colors function and method
+          names, classes and types, parameters and properties in every supported language, and
+          colors matching brackets.
+        </p>
+        <h2>Problems panel</h2>
+        <p>
+          <K>Ctrl+Shift+M</K> opens the Problems panel. It lists errors, warnings and notes from
+          every checker — TypeScript/JavaScript, JSON, CSS, Python (Pyright) and CodeForge&apos;s
+          own checks — grouped by file with line and column. Filter by severity or text, and click a
+          problem to jump to it. CodeForge&apos;s own checks find:
+        </p>
+        <ul>
+          <li>
+            Code from another language, such as Python <code>print(…)</code> or <code>def …:</code>{" "}
+            in an HTML page (browsers show it as text), JavaScript outside a{" "}
+            <code>&lt;script&gt;</code> tag, JavaScript in a Python file, or Python in a JavaScript
+            file. Code inside <code>&lt;script&gt;</code>, <code>&lt;style&gt;</code>,{" "}
+            <code>&lt;pre&gt;</code>, <code>&lt;code&gt;</code> and comments, and ordinary
+            sentences, are not reported.
+          </li>
+          <li>
+            Unbalanced HTML: closing tags without an opening tag, and elements that are never closed
+            (void elements like <code>&lt;br&gt;</code> and optional end tags like{" "}
+            <code>&lt;p&gt;</code> and <code>&lt;li&gt;</code> are understood).
+          </li>
+        </ul>
         <h2>Current limitations</h2>
         <ul>
           <li>
-            TypeScript and JavaScript intelligence covers the files you have open; types from{" "}
-            <code>node_modules</code> are not loaded yet, so imports from packages are treated as
-            untyped.
+            TypeScript and JavaScript intelligence covers every source file in the open folder (up
+            to 400 files); types from <code>node_modules</code> are not loaded yet, so imports from
+            packages are treated as untyped.
           </li>
           <li>
             Python IntelliSense starts the first time you open a <code>.py</code> file. It works
@@ -600,7 +772,10 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
             with pip, install Python and make sure <code>python</code> works in a terminal. Turn it
             off with the <code>python.languageServer</code> setting.
           </li>
-          <li>Language servers for Go, Rust, Java, C# and others are planned but not included.</li>
+          <li>
+            Full IntelliSense (types, go to definition) for Go, Rust, Java, C# and others needs
+            their language servers, which are planned but not included yet.
+          </li>
         </ul>
       </>
     ),
@@ -639,6 +814,13 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
               </td>
               <td>on</td>
               <td>Reopen the last folder at startup</td>
+            </tr>
+            <tr>
+              <td>
+                <code>window.zoomLevel</code>
+              </td>
+              <td>0</td>
+              <td>Zoom of the whole window (each step is 20%)</td>
             </tr>
             <tr>
               <td>
@@ -686,8 +868,15 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
               <td>
                 <code>files.autoSave</code>
               </td>
-              <td>off</td>
-              <td>Save automatically after a delay</td>
+              <td>afterDelay</td>
+              <td>Save automatically shortly after you stop typing (off / afterDelay)</td>
+            </tr>
+            <tr>
+              <td>
+                <code>files.autoSaveDelay</code>
+              </td>
+              <td>1000</td>
+              <td>Milliseconds to wait after the last change before auto saving</td>
             </tr>
             <tr>
               <td>
@@ -705,10 +894,17 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
             </tr>
             <tr>
               <td>
+                <code>terminal.defaultProfile</code>
+              </td>
+              <td>(Automatic: PowerShell)</td>
+              <td>Shell for new terminals: PowerShell, Command Prompt, PowerShell 7, Git Bash…</td>
+            </tr>
+            <tr>
+              <td>
                 <code>terminal.shell</code>
               </td>
-              <td>(PowerShell)</td>
-              <td>Program used for new terminals</td>
+              <td>(empty)</td>
+              <td>Full path of another shell program, used instead of the default terminal</td>
             </tr>
             <tr>
               <td>
@@ -748,8 +944,8 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
     body: (
       <>
         <p>
-          The Command Palette (<K>Ctrl+Shift+P</K>) lists every command with its shortcut. These are
-          the defaults on Windows:
+          The Command Palette (<K>Ctrl+Shift+P</K>) and <em>Help → Keyboard Shortcuts</em> list
+          every command with its shortcut. These are the defaults on Windows:
         </p>
         <h2>General</h2>
         <table>
@@ -792,9 +988,16 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
               </td>
             </tr>
             <tr>
-              <td>Editor font size</td>
+              <td>Zoom in / out / reset</td>
               <td>
-                <K>Ctrl+=</K> / <K>Ctrl+-</K>
+                <K>Ctrl+=</K> / <K>Ctrl+-</K> / <K>Ctrl+0</K>
+              </td>
+            </tr>
+            <tr>
+              <td>Open a menu (File, Edit, Selection, View, Go, Run, Terminal, Help)</td>
+              <td>
+                <K>Alt+F</K>, <K>Alt+E</K>, <K>Alt+S</K>, <K>Alt+V</K>, <K>Alt+G</K>, <K>Alt+R</K>,{" "}
+                <K>Alt+T</K>, <K>Alt+H</K>
               </td>
             </tr>
           </tbody>
@@ -815,9 +1018,15 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
               </td>
             </tr>
             <tr>
-              <td>Close tab</td>
+              <td>New file in the open folder</td>
               <td>
-                <K>Ctrl+W</K>
+                <K>Ctrl+Alt+N</K>
+              </td>
+            </tr>
+            <tr>
+              <td>Close tab / exit CodeForge</td>
+              <td>
+                <K>Ctrl+W</K> / <K>Alt+F4</K>
               </td>
             </tr>
             <tr>
@@ -879,6 +1088,24 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
                 <K>Alt+Z</K>
               </td>
             </tr>
+            <tr>
+              <td>Select line / expand / shrink selection</td>
+              <td>
+                <K>Ctrl+L</K> / <K>Shift+Alt+Right</K> / <K>Shift+Alt+Left</K>
+              </td>
+            </tr>
+            <tr>
+              <td>Add cursor above / below</td>
+              <td>
+                <K>Ctrl+Alt+Up</K> / <K>Ctrl+Alt+Down</K>
+              </td>
+            </tr>
+            <tr>
+              <td>Show suggestions</td>
+              <td>
+                <K>Ctrl+Space</K>
+              </td>
+            </tr>
           </tbody>
         </table>
         <h2>Terminal and run</h2>
@@ -897,9 +1124,9 @@ C:\\Program Files\\Git\\bin\\bash.exe`}</code>
               </td>
             </tr>
             <tr>
-              <td>Run active file</td>
+              <td>Run current file / start debugging / stop</td>
               <td>
-                <K>Ctrl+F5</K>
+                <K>Ctrl+F5</K> / <K>F5</K> / <K>Shift+F5</K>
               </td>
             </tr>
             <tr>

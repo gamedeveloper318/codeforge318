@@ -48,7 +48,16 @@ const GIT_CLASS: Partial<Record<GitChangeKind, string>> = {
   conflict: "git-conflict",
 };
 
-function InlineInput({ edit, initial }: { edit: ExplorerEdit; initial: string }) {
+/** Name input for new/renamed items; the icon follows the name as it is typed. */
+function InlineInput({
+  edit,
+  initial,
+  folder,
+}: {
+  edit: ExplorerEdit;
+  initial: string;
+  folder: boolean;
+}) {
   const ref = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState(initial);
   const error = value.trim() ? paths.validateFileName(value) : null;
@@ -63,29 +72,32 @@ function InlineInput({ edit, initial }: { edit: ExplorerEdit; initial: string })
   }, [edit.mode, initial]);
 
   return (
-    <input
-      ref={ref}
-      className={`text-input${error ? " invalid" : ""}`}
-      value={value}
-      title={error ?? undefined}
-      aria-label={
-        edit.mode === "rename"
-          ? "New name"
-          : edit.mode === "new-file"
-            ? "New file name"
-            : "New folder name"
-      }
-      spellCheck={false}
-      onChange={(e) => setValue(e.target.value)}
-      onKeyDown={(e) => {
-        e.stopPropagation();
-        if (e.key === "Enter" && !error) void commitEdit(value);
-        if (e.key === "Escape") cancelEdit();
-      }}
-      onBlur={() =>
-        value.trim() && !error && value !== initial ? void commitEdit(value) : cancelEdit()
-      }
-    />
+    <>
+      {folder ? <FolderIcon open={false} /> : <FileIcon name={value} />}
+      <input
+        ref={ref}
+        className={`text-input${error ? " invalid" : ""}`}
+        value={value}
+        title={error ?? undefined}
+        aria-label={
+          edit.mode === "rename"
+            ? "New name"
+            : edit.mode === "new-file"
+              ? "New file name"
+              : "New folder name"
+        }
+        spellCheck={false}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === "Enter" && !error) void commitEdit(value);
+          if (e.key === "Escape") cancelEdit();
+        }}
+        onBlur={() =>
+          value.trim() && !error && value !== initial ? void commitEdit(value) : cancelEdit()
+        }
+      />
+    </>
   );
 }
 
@@ -314,8 +326,7 @@ export function ExplorerView() {
                 style={{ paddingLeft: indent }}
               >
                 <span className="twistie" />
-                {isFolder ? <FolderIcon open={false} /> : <FileIcon name={row.entry?.name ?? ""} />}
-                <InlineInput edit={row.edit} initial={row.entry?.name ?? ""} />
+                <InlineInput edit={row.edit} initial={row.entry?.name ?? ""} folder={isFolder} />
               </div>
             );
           }

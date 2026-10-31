@@ -263,6 +263,9 @@ select {
 /* ---------- Menus (title bar dropdowns and context menus) ---------- */
 
 .menu {
+  /* Menus live in <body>, outside the title bar's window-drag region, so real
+     mouse clicks reach them on Windows. */
+  -webkit-app-region: no-drag;
   position: fixed;
   z-index: 1000;
   min-width: 220px;
@@ -283,7 +286,7 @@ select {
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
   width: 100%;
   border: none;
   background: transparent;
@@ -304,8 +307,15 @@ select {
 .menu-item.danger:hover:not(:disabled) {
   background: var(--danger);
 }
+.menu-item .check {
+  width: 14px;
+  flex: none;
+  display: grid;
+  place-items: center;
+}
 .menu-item .label {
   flex: 1;
+  margin-right: 14px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1391,4 +1401,177 @@ button.status-item:hover {
   color: var(--text-subtle);
   text-align: center;
   flex: none;
+}
+
+/* ---------- Keyboard shortcuts page ---------- */
+
+.shortcuts-page {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 28px 36px;
+  background: var(--editor);
+  user-select: text;
+}
+.shortcuts-header h1 {
+  margin: 0 0 14px;
+  font-size: 20px;
+  font-weight: 600;
+}
+.shortcuts-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 640px;
+  padding: 0 10px;
+  height: 32px;
+  border: 1px solid var(--input-border);
+  border-radius: 7px;
+  background: var(--input-bg);
+  color: var(--text-muted);
+}
+.shortcuts-search:focus-within {
+  border-color: var(--focus);
+}
+.shortcuts-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+}
+.shortcuts-table {
+  margin-top: 18px;
+  max-width: 980px;
+}
+.shortcuts-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) minmax(200px, 1.4fr) 1fr;
+  gap: 12px;
+  align-items: center;
+  min-height: 30px;
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+.shortcuts-row:not(.head):hover {
+  background: var(--hover);
+}
+.shortcuts-row.head {
+  color: var(--text-subtle);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+}
+.shortcuts-row .muted {
+  color: var(--text-subtle);
+}
+.kbd {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 6px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--hover);
+  font-family: var(--cf-font-sans);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.status-error {
+  color: var(--danger) !important;
+}
+
+/* ---------- File icons ---------- */
+
+.file-icon {
+  flex: none;
+  display: block;
+  object-fit: contain;
+}
+
+/* ---------- Problems panel ---------- */
+
+.problems {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.problems > .list-view {
+  flex: 1;
+  min-height: 0;
+}
+.problems-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.problems-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 11px;
+  background: transparent;
+  color: var(--text-subtle);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.problems-filter.on {
+  color: var(--text);
+  background: var(--hover);
+}
+.problems-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--text-subtle);
+  width: min(280px, 40%);
+}
+.problems-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 12px;
+}
+.problems-file .count {
+  margin-left: auto;
+  margin-right: 8px;
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--hover);
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: center;
+}
+.problem-row {
+  padding-left: 32px !important;
+}
+.problem-message {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.problem-position {
+  flex: none;
+  max-width: none !important;
+  margin-right: 8px;
 }

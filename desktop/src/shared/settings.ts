@@ -28,6 +28,7 @@ const stringList = (fallback: string[]) =>
 export const settingsSchema = z.object({
   "workbench.colorTheme": z.enum(["codeforge-dark", "codeforge-light"]).catch("codeforge-dark"),
   "workbench.restoreWorkspace": z.boolean().catch(true),
+  "window.zoomLevel": z.number().min(-5).max(5).catch(0),
   "editor.fontSize": z.number().int().min(8).max(40).catch(14),
   "editor.fontFamily": z
     .string()
@@ -46,10 +47,11 @@ export const settingsSchema = z.object({
   "editor.bracketPairColorization": z.boolean().catch(true),
   "editor.stickyScroll": z.boolean().catch(true),
   "editor.formatOnSave": z.boolean().catch(false),
-  "files.autoSave": z.enum(["off", "afterDelay"]).catch("off"),
+  "files.autoSave": z.enum(["off", "afterDelay"]).catch("afterDelay"),
   "files.autoSaveDelay": z.number().int().min(100).max(60000).catch(1000),
   "files.exclude": stringList(DEFAULT_FILES_EXCLUDE),
   "search.exclude": stringList(DEFAULT_SEARCH_EXCLUDE),
+  "terminal.defaultProfile": z.string().max(50).catch(""),
   "terminal.shell": z.string().max(500).catch(""),
   "terminal.fontSize": z.number().int().min(8).max(32).catch(13),
   "terminal.cursorBlink": z.boolean().catch(true),
@@ -111,6 +113,14 @@ export const SETTING_DESCRIPTORS: SettingDescriptor[] = [
     label: "Restore last folder",
     description: "Reopen the folder you were working in when CodeForge starts.",
     control: { type: "boolean" },
+  },
+  {
+    key: "window.zoomLevel",
+    category: "Appearance",
+    label: "Zoom level",
+    description:
+      "Zoom of the whole window (0 = 100%, each step is 20%). Also View > Zoom In / Zoom Out / Reset Zoom (Ctrl+= / Ctrl+- / Ctrl+0).",
+    control: { type: "number", min: -5, max: 5 },
   },
   {
     key: "editor.fontSize",
@@ -242,7 +252,8 @@ export const SETTING_DESCRIPTORS: SettingDescriptor[] = [
     key: "files.autoSave",
     category: "Files",
     label: "Auto save",
-    description: "Save changed files automatically after a short delay.",
+    description:
+      "Save changed files automatically shortly after you stop typing. Also File > Auto Save. Untitled files are never auto saved.",
     control: {
       type: "enum",
       options: [
@@ -273,11 +284,30 @@ export const SETTING_DESCRIPTORS: SettingDescriptor[] = [
     control: { type: "list" },
   },
   {
+    key: "terminal.defaultProfile",
+    category: "Terminal",
+    label: "Default terminal",
+    description:
+      "Shell started by New Terminal. Shells that aren't installed are skipped. Terminal > New Terminal With Profile… starts any other one.",
+    control: {
+      type: "enum",
+      options: [
+        { value: "", label: "Automatic (PowerShell on Windows, login shell elsewhere)" },
+        { value: "powershell", label: "PowerShell" },
+        { value: "pwsh", label: "PowerShell 7" },
+        { value: "cmd", label: "Command Prompt" },
+        { value: "git-bash", label: "Git Bash" },
+        { value: "bash", label: "bash" },
+        { value: "zsh", label: "zsh" },
+      ],
+    },
+  },
+  {
     key: "terminal.shell",
     category: "Terminal",
-    label: "Shell path",
+    label: "Custom shell path",
     description:
-      "Program started in new terminals. Leave empty for the default (PowerShell on Windows, $SHELL elsewhere).",
+      "Full path of another shell program to use for new terminals instead of the default terminal. Leave empty to use the default terminal setting.",
     control: { type: "string", placeholder: "Default" },
   },
   {

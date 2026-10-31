@@ -1,4 +1,4 @@
-import { GitCompare, Settings, X } from "lucide-react";
+import { GitCompare, Keyboard, Settings, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { activateTab, closeTab, closeTabs } from "../../actions/editor";
 import { copyPath, revealInOS } from "../../actions/explorer";
@@ -10,8 +10,9 @@ import { openContextMenu } from "../Menu";
 
 function TabIcon({ tab }: { tab: Tab }) {
   if (tab.kind === "settings") return <Settings size={14} color="var(--text-muted)" />;
+  if (tab.kind === "shortcuts") return <Keyboard size={14} color="var(--text-muted)" />;
   if (tab.kind === "diff") return <GitCompare size={14} color="var(--git-modified)" />;
-  return <FileIcon name={tab.path ?? tab.title} size={14} />;
+  return <FileIcon name={tab.path ?? tab.title} />;
 }
 
 export function TabBar() {

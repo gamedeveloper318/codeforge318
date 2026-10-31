@@ -15,9 +15,18 @@ export interface LaunchedApp {
   userData: string;
 }
 
-/** Starts CodeForge with an isolated, empty settings folder. */
-export async function launchApp(): Promise<LaunchedApp> {
+/**
+ * Starts CodeForge with an isolated settings folder. Auto Save is off unless a
+ * test turns it on, so tests can check unsaved changes step by step.
+ */
+export async function launchApp(
+  options: { settings?: Record<string, unknown>; args?: string[] } = {},
+): Promise<LaunchedApp> {
   const userData = mkdtempSync(path.join(tmpdir(), "codeforge-e2e-user-"));
+  writeFileSync(
+    path.join(userData, "settings.json"),
+    JSON.stringify({ "files.autoSave": "off", ...options.settings }, null, 2),
+  );
   const env: Record<string, string> = {};
   for (const [key, value] of Object.entries(process.env)) if (value !== undefined) env[key] = value;
   // Inherited from editors that are themselves Electron apps; it would make
@@ -30,8 +39,8 @@ export async function launchApp(): Promise<LaunchedApp> {
   const executable = process.env.CODEFORGE_E2E_EXECUTABLE;
   const app = await electron.launch(
     executable
-      ? { executablePath: path.resolve(executable), args: [], env }
-      : { args: [path.resolve(".")], env },
+      ? { executablePath: path.resolve(executable), args: options.args ?? [], env }
+      : { args: [path.resolve("."), ...(options.args ?? [])], env },
   );
   const page = await app.firstWindow();
   await page.waitForSelector(".workbench", { timeout: 30_000 });
@@ -89,6 +98,46 @@ export async function answerMessageBoxes(
       return { response: answer, checkboxChecked: false };
     }) as typeof dialog.showMessageBox;
   }, response);
+}
+
+/** Makes "Save As" dialogs pick `file` without showing them. */
+export async function answerSaveDialog(app: ElectronApplication, file: string): Promise<void> {
+  await app.evaluate(({ dialog }, chosen) => {
+    dialog.showSaveDialog = (async () => ({
+      canceled: false,
+      filePath: chosen,
+    })) as typeof dialog.showSaveDialog;
+  }, file);
+}
+
+/** Records links CodeForge opens in the web browser instead of opening them. */
+export async function captureExternalLinks(app: ElectronApplication): Promise<void> {
+  await app.evaluate(({ shell }) => {
+    const g = globalThis as unknown as { openedLinks: string[] };
+    g.openedLinks = [];
+    shell.openExternal = (async (url: string) => {
+      g.openedLinks.push(url);
+    }) as typeof shell.openExternal;
+  });
+}
+
+export async function openedLinks(app: ElectronApplication): Promise<string[]> {
+  return app.evaluate(
+    () => (globalThis as unknown as { openedLinks?: string[] }).openedLinks ?? [],
+  );
+}
+
+/** Opens a title-bar menu (File, Edit, ...) and runs one of its items. */
+export async function runMenuItem(page: Page, menu: string, item: string): Promise<void> {
+  await page.getByTestId(`menubar-${menu.toLowerCase()}`).click();
+  const dropdown = page.getByTestId("menu");
+  await expect(dropdown).toBeVisible();
+  await dropdown
+    .getByRole("menuitem", { name: item, exact: true })
+    .or(dropdown.getByRole("menuitemcheckbox", { name: item, exact: true }))
+    .first()
+    .click();
+  await expect(dropdown).toHaveCount(0);
 }
 
 export async function shownMessages(app: ElectronApplication): Promise<string[]> {

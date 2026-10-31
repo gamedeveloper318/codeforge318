@@ -16,14 +16,18 @@ export type PanelView = "terminal" | "problems" | "output";
 export type Tab =
   | { kind: "file"; id: string; path: string | null; title: string }
   | { kind: "diff"; id: string; path: string; staged: boolean; title: string }
-  | { kind: "settings"; id: "settings"; title: string };
+  | { kind: "settings"; id: "settings"; title: string }
+  | { kind: "shortcuts"; id: "shortcuts"; title: string };
 
 export interface Problem {
   path: string;
   line: number;
   column: number;
+  endLine: number;
+  endColumn: number;
   message: string;
   severity: "error" | "warning" | "info";
+  /** Who reported it: "ts", "css", "Pyright", "CodeForge", ... */
   source?: string;
 }
 
@@ -48,6 +52,10 @@ export interface TerminalState {
   group: number;
   title: string;
   pid: number;
+  /** Shell profile it was started with, e.g. "PowerShell" or "Command Prompt". */
+  profile: string;
+  /** Terminals started by Run / Start Debugging; Stop Running Program targets them. */
+  purpose?: "run" | "debug";
   exited: boolean;
   exitCode?: number;
 }
@@ -65,6 +73,8 @@ export interface MenuItem {
   shortcut?: string;
   disabled?: boolean;
   danger?: boolean;
+  /** Shows a check mark (toggle items such as Auto Save). */
+  checked?: boolean;
   separator?: boolean;
   run?: () => void;
 }
@@ -76,6 +86,8 @@ export interface QuickPickItem {
   detail?: string;
   /** Character indices of `label` to highlight. */
   highlights?: number[];
+  /** File name whose language icon is shown before the label. */
+  fileIcon?: string;
 }
 
 export type QuickPickRequest =
@@ -137,6 +149,8 @@ export interface WorkbenchState {
   tabs: Tab[];
   activeTabId: string | null;
   dirty: Record<string, boolean>;
+  /** Last save of each file tab: shown in the status bar ("Saving…", "Saved", "Save failed"). */
+  saveState: Record<string, "saving" | "saved" | "failed">;
   editorStatus: EditorStatus | null;
 
   dirChildren: Record<string, DirEntry[]>;
@@ -160,6 +174,8 @@ export interface WorkbenchState {
   quickPick: QuickPickRequest | null;
   updateStatus: UpdateStatus | null;
   contextMenu: { x: number; y: number; items: MenuItem[] } | null;
+  /** Index of the open title-bar menu (File, Edit, ...). */
+  openMenu: number | null;
 }
 
 export const useStore = create<WorkbenchState>()(() => ({
@@ -179,6 +195,7 @@ export const useStore = create<WorkbenchState>()(() => ({
   tabs: [],
   activeTabId: null,
   dirty: {},
+  saveState: {},
   editorStatus: null,
 
   dirChildren: {},
@@ -214,6 +231,7 @@ export const useStore = create<WorkbenchState>()(() => ({
   quickPick: null,
   updateStatus: null,
   contextMenu: null,
+  openMenu: null,
 }));
 
 export const getState = useStore.getState;

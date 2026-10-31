@@ -3,6 +3,7 @@ import { setState, useStore } from "../../state/store";
 import { CodeEditor } from "./CodeEditor";
 import { DiffView } from "./DiffView";
 import { SettingsPage } from "./SettingsPage";
+import { ShortcutsPage } from "./ShortcutsPage";
 import { Breadcrumbs, TabBar } from "./TabBar";
 import { WelcomePage } from "./WelcomePage";
 
@@ -25,6 +26,7 @@ export function EditorArea() {
         <CodeEditor tabId={fileTabId} />
         {!active && <WelcomePage />}
         {active?.kind === "settings" && <SettingsPage />}
+        {active?.kind === "shortcuts" && <ShortcutsPage />}
         {active?.kind === "diff" && (
           <DiffView key={active.id} path={active.path} staged={active.staged} />
         )}

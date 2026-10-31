@@ -69,7 +69,7 @@ const FAQ: { q: string; a: React.ReactNode }[] = [
   },
   {
     q: "Does it support debugging?",
-    a: "Breakpoint debugging is not in the current release. You can run programs from the Run view or the terminal, and use your language's own debugger there in the meantime.",
+    a: "Yes, in the terminal: Run → Start Debugging (F5) opens Python files in pdb and JavaScript files in node inspect, where you step through code, set breakpoints by line number and inspect variables. Clicking in the editor gutter to set breakpoints isn't available yet.",
   },
   {
     q: "Is there a Mac or Linux version?",

@@ -11,6 +11,14 @@ import { logOutput, reportError } from "./notify";
 import { handleTerminalData, handleTerminalExit } from "./terminal";
 import { handleUpdateStatus } from "./update";
 import { setupPythonLanguageServer } from "../lsp/python";
+import { startCustomDiagnostics } from "../diagnostics/custom-diagnostics";
+import { registerLanguageCompletions } from "../monaco/language-completions";
+import {
+  loadProjectSources,
+  refreshProjectSources,
+  watchEditorModels,
+} from "../monaco/project-intellisense";
+import { registerSemanticHighlighting } from "../monaco/semantic-highlighting";
 
 export function applySettings(settings: Settings): void {
   const light = settings["workbench.colorTheme"] === "codeforge-light";
@@ -37,6 +45,8 @@ async function enterWorkspace(info: WorkspaceInfo | null): Promise<void> {
     logOutput(`Opened folder ${info.root}`);
     await loadDir(info.root);
   }
+  // In the background: lets JavaScript/TypeScript IntelliSense see every project file.
+  void loadProjectSources();
   void refreshGit();
   setState({ recent: await api.invoke("workspace:recent").catch(() => getState().recent) });
 }
@@ -79,6 +89,11 @@ export async function openFiles(): Promise<void> {
   for (const file of files) await openFile(file);
 }
 
+/** File > Exit. Closing goes through the same unsaved-changes check as the close button. */
+export async function quitApp(): Promise<void> {
+  await api.invoke("app:quit").catch((error) => reportError("Could not exit", error));
+}
+
 /** Loads state from the main process and subscribes to its events. Runs once. */
 export async function initialize(): Promise<void> {
   const [appInfo, settings, workspace, updateStatus] = await Promise.all([
@@ -90,11 +105,16 @@ export async function initialize(): Promise<void> {
   applySettings(settings);
   setState({ appInfo, updateStatus });
   setupPythonLanguageServer();
+  startCustomDiagnostics();
+  registerSemanticHighlighting();
+  registerLanguageCompletions();
+  watchEditorModels();
 
   api.on("settings:changed", applySettings);
   api.on("fs:changed", ({ paths }) => {
     void refreshForChanges(paths);
     void reloadChangedFiles(paths);
+    void refreshProjectSources(paths);
   });
   api.on("git:changed", () => void refreshGit());
   api.on("terminal:data", ({ id, data }) => handleTerminalData(id, data));

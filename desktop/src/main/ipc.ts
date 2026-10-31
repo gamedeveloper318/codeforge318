@@ -25,6 +25,7 @@ import type { GitService } from "./git-service";
 import { log } from "./log";
 import type { LspService } from "./lsp-service";
 import { isLocalPreviewUrl, openPreviewWindow } from "./preview";
+import { prepareRun } from "./run-service";
 import { replaceInFiles, type SearchService } from "./search-service";
 import type { TerminalService } from "./terminal-service";
 import type { UpdateService } from "./update-service";
@@ -173,6 +174,11 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     shell.showItemInFolder(await workspace.resolve(target));
   });
 
+  handle("app:quit", z.tuple([]), () => {
+    // Same path as the window's close button: the UI asks about unsaved files first.
+    deps.getWindow()?.close();
+  });
+
   handle("window:confirm-close", z.tuple([]), () => deps.confirmClose());
 
   // --- workspace ----------------------------------------------------------
@@ -297,7 +303,14 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   // --- terminal -------------------------------------------------------------
   handle(
     "terminal:create",
-    z.tuple([z.object({ cols: dimension, rows: dimension, cwd: absPath.optional() })]),
+    z.tuple([
+      z.object({
+        cols: dimension,
+        rows: dimension,
+        cwd: absPath.optional(),
+        profile: z.string().max(50).optional(),
+      }),
+    ]),
     async (options) => {
       let cwd = workspace.root ?? os.homedir();
       if (options.cwd) {
@@ -305,10 +318,34 @@ export function registerIpcHandlers(deps: IpcDeps): void {
         const info = await stat(resolved).catch(() => null);
         cwd = info?.isDirectory() ? resolved : path.dirname(resolved);
       }
-      return terminals.create({ cols: options.cols, rows: options.rows, cwd });
+      // Only shells detected on this computer can start; the id just picks one.
+      return terminals.create({
+        cols: options.cols,
+        rows: options.rows,
+        cwd,
+        profile: options.profile,
+      });
     },
   );
   handle("terminal:kill", z.tuple([terminalId]), (id) => terminals.kill(id));
+  handle("terminal:profiles", z.tuple([]), () => terminals.profiles());
+
+  // --- run & debug ----------------------------------------------------------
+  const runMode = z.enum(["run", "debug"]);
+  handle("run:check", z.tuple([absPath, runMode]), async (file, mode) => {
+    return (await prepareRun(workspace, file, mode)).check;
+  });
+  handle(
+    "run:start",
+    z.tuple([z.object({ file: absPath, mode: runMode, cols: dimension, rows: dimension })]),
+    async ({ file, mode, cols, rows }) => {
+      const prepared = await prepareRun(workspace, file, mode);
+      if (!prepared.check.ok || !prepared.launch) {
+        throw new Error(prepared.check.ok ? "Nothing to run." : prepared.check.reason);
+      }
+      return terminals.createProgram(prepared.launch, { cols, rows, cwd: prepared.cwd });
+    },
+  );
   on("terminal:write", z.tuple([terminalId, z.string().max(1_000_000)]), (id, data) =>
     terminals.write(id, data),
   );

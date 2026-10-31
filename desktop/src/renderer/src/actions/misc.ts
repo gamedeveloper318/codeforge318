@@ -1,13 +1,12 @@
 import { GlobSet, splitPatterns } from "@shared/glob";
 import type { SearchQuery, SearchResponse } from "@shared/ipc";
-import { runCommandForPath } from "@shared/languages";
 import { buildMatcher, findMatches, replaceInText } from "@shared/search-matcher";
 import type { Settings } from "@shared/settings";
 import { api, errorMessage } from "../lib/bridge";
 import * as paths from "../lib/paths";
 import { getEntry, isDirty } from "../monaco/models";
 import { getState, setState, type SearchState } from "../state/store";
-import { findFileTab, saveTab } from "./editor";
+import { findFileTab } from "./editor";
 import { logOutput, reportError, toast } from "./notify";
 import { createTerminal } from "./terminal";
 
@@ -34,6 +33,27 @@ export async function resetSettings(): Promise<void> {
     await api
       .invoke("settings:reset")
       .catch((error) => reportError("Could not reset settings", error));
+}
+
+/** View > Zoom In (+1), Zoom Out (-1) and Reset Zoom (0) for the whole window. */
+export function zoomWindow(step: 1 | -1 | 0): void {
+  const current = getState().settings["window.zoomLevel"];
+  const next = step === 0 ? 0 : Math.max(-5, Math.min(5, current + step));
+  if (next === current && step !== 0) {
+    toast("info", step > 0 ? "Already at the largest zoom." : "Already at the smallest zoom.");
+    return;
+  }
+  void updateSettings({ "window.zoomLevel": next });
+  toast("info", `Zoom ${Math.round(Math.pow(1.2, next) * 100)}%`);
+}
+
+export const DOCUMENTATION_URL = "https://codeforge318.vercel.app/docs";
+
+/** Help > Documentation opens the CodeForge docs in the web browser. */
+export async function openDocumentation(): Promise<void> {
+  await api
+    .invoke("app:open-external", DOCUMENTATION_URL)
+    .catch((error) => reportError("Could not open the documentation", error));
 }
 
 export function toggleTheme(): void {
@@ -212,34 +232,6 @@ function activeFilePath(): string | null {
   const { tabs, activeTabId } = getState();
   const tab = tabs.find((t) => t.id === activeTabId);
   return tab?.kind === "file" ? tab.path : null;
-}
-
-export async function runActiveFile(): Promise<void> {
-  let file = activeFilePath();
-  const { activeTabId } = getState();
-  if (!file || !activeTabId) {
-    toast("info", "Open a saved file to run it.");
-    return;
-  }
-  const runner = runCommandForPath(file);
-  if (!runner) {
-    toast(
-      "info",
-      `CodeForge doesn't know how to run "${paths.basename(file)}"`,
-      "Supported: JavaScript, TypeScript, Python, PowerShell, shell scripts, Ruby, PHP, Go, Lua and Dart.",
-    );
-    return;
-  }
-  if (isDirty(activeTabId)) {
-    const saved = await saveTab(activeTabId);
-    if (!saved) return;
-    file = saved;
-  }
-  await createTerminal({
-    cwd: paths.dirname(file),
-    command: `${runner.program} "${file}"`,
-    name: `Run ${paths.basename(file)}`,
-  });
 }
 
 export async function readPackageScripts(): Promise<Record<string, string> | null> {

@@ -6,7 +6,9 @@ import { getEntry } from "../../monaco/models";
 import { monaco } from "../../monaco/setup";
 import { getState, setState, useStore } from "../../state/store";
 
-export function editorOptions(settings: Settings): monaco.editor.IEditorOptions {
+export function editorOptions(
+  settings: Settings,
+): monaco.editor.IEditorOptions & monaco.editor.IGlobalEditorOptions {
   return {
     fontSize: settings["editor.fontSize"],
     fontFamily: settings["editor.fontFamily"],
@@ -29,6 +31,19 @@ export function editorOptions(settings: Settings): monaco.editor.IEditorOptions 
     mouseWheelZoom: true,
     tabCompletion: "on",
     linkedEditing: true,
+    // Language services color functions, classes, parameters and properties.
+    "semanticHighlighting.enabled": true,
+    matchBrackets: "always",
+    // IntelliSense: suggestions while typing, accepted with Tab or Enter.
+    quickSuggestions: { other: "on", comments: "off", strings: "on" },
+    suggestOnTriggerCharacters: true,
+    acceptSuggestionOnEnter: "on",
+    wordBasedSuggestions: "allDocuments",
+    snippetSuggestions: "inline",
+    suggest: { showWords: true, showSnippets: true, preview: true, showStatusBar: true },
+    parameterHints: { enabled: true, cycle: true },
+    hover: { enabled: "on", delay: 400 },
+    inlayHints: { enabled: "offUnlessPressed" },
   };
 }
 
@@ -112,7 +127,7 @@ export function CodeEditor({ tabId }: { tabId: string | null }) {
       editor.setSelection({
         startLineNumber: reveal.line,
         startColumn: reveal.column,
-        endLineNumber: reveal.line,
+        endLineNumber: reveal.endLine ?? reveal.line,
         endColumn: reveal.endColumn ?? reveal.column,
       });
       editor.revealLineInCenter(reveal.line);

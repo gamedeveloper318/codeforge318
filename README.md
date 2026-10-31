@@ -35,9 +35,9 @@ npm run dev:web        # run the website at http://localhost:3000
 
 ## What works today
 
-Editor tabs, saving and unsaved-change protection · find/replace, multi-cursor, folding · syntax highlighting for 70+ file types · Python IntelliSense (Pyright) · TypeScript/JavaScript/JSON/CSS/HTML intelligence · file explorer (create, rename, move, delete to Recycle Bin) · real integrated terminals (split side by side) · Git (stage, diff, commit, branches, pull/push) · project search and replace · Command Palette and Go to File · run files and npm scripts · sandboxed HTML/localhost preview · settings with dark and light themes · Windows installer with automatic updates.
+Editor tabs, Auto Save and unsaved-change protection · working title-bar menus with shortcuts · find/replace, multi-cursor, folding · syntax highlighting for 70+ file types with function/class/parameter colors · language file icons · Python IntelliSense (Pyright) · TypeScript/JavaScript (project-wide)/JSON/CSS/HTML intelligence · keyword and snippet suggestions for Java, C/C++, C#, Go, Rust and more · Problems panel with wrong-language and HTML tag checks · file explorer (create, rename, move, delete to Recycle Bin) · real integrated terminals (PowerShell, Command Prompt, Git Bash; split side by side) · run, stop and debug files (pdb, node inspect) · Git (stage, diff, commit, branches, pull/push) · project search and replace · Command Palette and Go to File · sandboxed HTML/localhost preview · settings with dark and light themes · Windows installer with automatic updates.
 
-Not yet: breakpoint debugging, language servers for Go/Rust/Java/C#, extensions, signed installers, tested macOS/Linux builds. The full matrix is in [docs/FEATURES.md](docs/FEATURES.md).
+Not yet: breakpoints in the editor gutter, language servers for Go/Rust/Java/C#, extensions, signed installers, tested macOS/Linux builds. The full matrix is in [docs/FEATURES.md](docs/FEATURES.md).
 
 ## Documentation
 

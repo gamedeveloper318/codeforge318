@@ -1,20 +1,15 @@
-import {
-  CircleX,
-  Columns2,
-  Info,
-  Plus,
-  SquareTerminal,
-  Trash2,
-  TriangleAlert,
-  X,
-  Eraser,
-} from "lucide-react";
+import { ChevronDown, Columns2, Eraser, Plus, SquareTerminal, Trash2, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef } from "react";
-import { openFile } from "../actions/editor";
-import { clearActiveTerminal, createTerminal, killTerminal } from "../actions/terminal";
-import * as paths from "../lib/paths";
+import {
+  clearActiveTerminal,
+  closeActiveTerminal,
+  createTerminal,
+  killTerminal,
+  pickTerminalProfile,
+} from "../actions/terminal";
 import { setState, useStore, type PanelView, type TerminalState } from "../state/store";
 import { attachXterm, fitXterm, focusXterm } from "../terminal/xterm-manager";
+import { ProblemsPanel } from "./ProblemsPanel";
 
 function TerminalPane({
   terminal,
@@ -102,7 +97,7 @@ function TerminalPanel() {
                 className={`tree-row${t.id === activeId ? " selected" : ""}`}
                 style={{ paddingLeft: inSplit && !firstOfGroup ? 26 : 10 }}
                 onClick={() => setState({ activeTerminalId: t.id })}
-                title={`PID ${t.pid}`}
+                title={`${t.profile} · PID ${t.pid}`}
               >
                 {inSplit && !firstOfGroup ? (
                   <span className="split-marker">└</span>
@@ -110,6 +105,9 @@ function TerminalPanel() {
                   <SquareTerminal size={13} />
                 )}
                 <span className={`name${t.exited ? " strike" : ""}`}>{t.title}</span>
+                {t.profile !== "Program" && t.title !== t.profile && (
+                  <span className="description">{t.profile}</span>
+                )}
                 <span className="row-actions">
                   <button
                     className="icon-button"
@@ -128,38 +126,6 @@ function TerminalPanel() {
         </div>
       )}
     </>
-  );
-}
-
-function ProblemsPanel() {
-  const problems = useStore((s) => s.problems);
-  const root = useStore((s) => s.workspace?.root);
-  if (!problems.length)
-    return <div className="empty-state">No problems have been detected in open files.</div>;
-  return (
-    <div className="list-view" data-testid="problems">
-      {problems.map((p, index) => (
-        <div
-          key={index}
-          className="tree-row"
-          style={{ paddingLeft: 14 }}
-          onClick={() => void openFile(p.path, { line: p.line, column: p.column })}
-          title={p.message}
-        >
-          {p.severity === "error" ? (
-            <CircleX size={14} className="severity-error" />
-          ) : p.severity === "warning" ? (
-            <TriangleAlert size={14} className="severity-warning" />
-          ) : (
-            <Info size={14} className="severity-info" />
-          )}
-          <span className="name">{p.message}</span>
-          <span className="description">
-            {root ? paths.relative(root, p.path) : paths.basename(p.path)} [{p.line}, {p.column}]
-          </span>
-        </div>
-      ))}
-    </div>
   );
 }
 
@@ -222,6 +188,14 @@ export function Panel() {
             </button>
             <button
               className="icon-button"
+              title="New Terminal With Profile… (PowerShell, Command Prompt, …)"
+              aria-label="New Terminal With Profile"
+              onClick={() => void pickTerminalProfile()}
+            >
+              <ChevronDown size={14} />
+            </button>
+            <button
+              className="icon-button"
               title="Split Terminal (Ctrl+Shift+5)"
               aria-label="Split Terminal"
               onClick={() => void createTerminal({ split: true })}
@@ -233,11 +207,9 @@ export function Panel() {
             </button>
             <button
               className="icon-button"
-              title="Kill Terminal"
-              onClick={() => {
-                const id = useStore.getState().activeTerminalId;
-                if (id !== null) void killTerminal(id);
-              }}
+              title="Close Terminal"
+              aria-label="Close Terminal"
+              onClick={() => void closeActiveTerminal()}
             >
               <Trash2 size={14} />
             </button>

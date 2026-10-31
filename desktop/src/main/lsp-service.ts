@@ -71,7 +71,75 @@ const FEATURE_CAPABILITIES = [
   "diagnosticProvider",
 ];
 
-type Params = Record<string, unknown> & { textDocument?: { uri?: string; languageId?: string } };
+type Params = Record<string, unknown> & {
+  textDocument?: { uri?: string; languageId?: string; text?: string };
+  position?: LspPosition;
+  contentChanges?: { range?: { start: LspPosition; end: LspPosition }; text: string }[];
+};
+
+interface LspPosition {
+  line: number;
+  character: number;
+}
+
+/** Offset of an LSP position (UTF-16 line/character, like JavaScript strings). */
+function offsetAt(text: string, position: LspPosition): number {
+  let offset = 0;
+  for (let line = 0; line < position.line; line++) {
+    const next = text.indexOf("\n", offset);
+    if (next === -1) return text.length;
+    offset = next + 1;
+  }
+  const lineEnd = text.indexOf("\n", offset);
+  const max = lineEnd === -1 ? text.length : lineEnd;
+  return Math.min(offset + position.character, max);
+}
+
+/** Applies textDocument/didChange content changes (full or incremental) to a text. */
+export function applyContentChanges(text: string, changes: Params["contentChanges"]): string {
+  for (const change of changes ?? []) {
+    if (!change.range) text = change.text;
+    else
+      text =
+        text.slice(0, offsetAt(text, change.range.start)) +
+        change.text +
+        text.slice(offsetAt(text, change.range.end));
+  }
+  return text;
+}
+
+type CompletionItem = { label?: unknown; insertText?: unknown; textEdit?: unknown };
+
+/**
+ * Gives completion items without a range the range of the word being typed.
+ * Without it the editor would treat the typed word as empty: it couldn't rank
+ * the best match first (typing "pri" must offer print before ProfileFunction)
+ * or replace the typed letters when an item is accepted.
+ */
+export function withWordRanges(result: unknown, lineText: string, position: LspPosition): unknown {
+  const items = (Array.isArray(result) ? result : (result as { items?: unknown } | null)?.items) as
+    CompletionItem[] | undefined;
+  if (!Array.isArray(items)) return result;
+  const before = lineText.slice(0, position.character);
+  const word = /[\p{L}\p{N}_]*$/u.exec(before)?.[0] ?? "";
+  if (!word) return result;
+  const range = {
+    start: { line: position.line, character: position.character - word.length },
+    end: { line: position.line, character: position.character },
+  };
+  const fixed = items.map((item) =>
+    item && typeof item === "object" && !item.textEdit && typeof item.label === "string"
+      ? {
+          ...item,
+          textEdit: {
+            range,
+            newText: typeof item.insertText === "string" ? item.insertText : item.label,
+          },
+        }
+      : item,
+  );
+  return Array.isArray(result) ? fixed : { ...(result as object), items: fixed };
+}
 
 export interface LspBridgeOptions {
   languageId: string;
@@ -90,6 +158,10 @@ export interface LspBridgeOptions {
 export class LspBridge {
   /** Open documents (lower-cased URI) and the messages that opened and edited them. */
   private readonly openDocuments = new Map<string, LspMessage[]>();
+  /** Current text of each open document. */
+  private readonly texts = new Map<string, string>();
+  /** Completion requests waiting for an answer: request id -> document and position. */
+  private readonly completions = new Map<string, { uri: string; position: LspPosition }>();
   private initializeId: unknown;
   private initializeRequest: LspMessage | null = null;
   private readonly replayIds = new Set<string>();
@@ -134,14 +206,21 @@ export class LspBridge {
       const languageId = params.textDocument?.languageId;
       if (languageId !== this.options.languageId || !uri?.startsWith("file:")) return;
       this.openDocuments.set(uri.toLowerCase(), [message]);
+      this.texts.set(uri.toLowerCase(), params.textDocument?.text ?? "");
       this.options.toServer(message);
       return;
     }
     if (method?.startsWith("textDocument/did")) {
-      const history = uri ? this.openDocuments.get(uri.toLowerCase()) : undefined;
-      if (!history) return;
-      if (method === "textDocument/didClose") this.openDocuments.delete(uri!.toLowerCase());
-      else if (method === "textDocument/didChange") history.push(message);
+      const key = uri?.toLowerCase();
+      const history = key ? this.openDocuments.get(key) : undefined;
+      if (!history || !key) return;
+      if (method === "textDocument/didClose") {
+        this.openDocuments.delete(key);
+        this.texts.delete(key);
+      } else if (method === "textDocument/didChange") {
+        history.push(message);
+        this.texts.set(key, applyContentChanges(this.texts.get(key) ?? "", params.contentChanges));
+      }
       this.options.toServer(message);
       return;
     }
@@ -160,6 +239,11 @@ export class LspBridge {
       this.options.toClient({ jsonrpc: "2.0", id: message.id as string | number, result: null });
       return;
     }
+    if (method === "textDocument/completion" && message.id !== undefined && uri && params.position)
+      this.completions.set(String(message.id), {
+        uri: uri.toLowerCase(),
+        position: params.position,
+      });
     this.options.toServer(message);
   }
 
@@ -218,6 +302,18 @@ export class LspBridge {
       return;
     }
     if (method === "window/logMessage" || method === "telemetry/event") return;
+    // Answers to the editor's requests have no method; ids of the server's own requests differ.
+    const completion = id !== undefined && !method ? this.completions.get(String(id)) : undefined;
+    if (completion) {
+      this.completions.delete(String(id));
+      const text = this.texts.get(completion.uri) ?? "";
+      const lineText = text.split("\n")[completion.position.line]?.replace(/\r$/, "") ?? "";
+      this.options.toClient({
+        ...message,
+        result: withWordRanges(message.result, lineText, completion.position),
+      });
+      return;
+    }
     this.options.toClient(message);
   }
 

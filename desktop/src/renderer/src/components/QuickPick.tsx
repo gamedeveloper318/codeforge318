@@ -5,6 +5,7 @@ import { COMMANDS, runCommand, shortcutFor } from "../commands/commands";
 import { api } from "../lib/bridge";
 import * as paths from "../lib/paths";
 import { getActiveEditor } from "../monaco/editor-ref";
+import { FileIcon } from "./FileIcon";
 import { setState, useStore, type QuickPickItem, type QuickPickRequest } from "../state/store";
 
 function Highlighted({ text, positions }: { text: string; positions?: number[] }) {
@@ -93,6 +94,7 @@ function QuickPickInner({ request }: { request: QuickPickRequest }) {
           return {
             id: item,
             label: name,
+            fileIcon: name,
             description: paths.dirname(rel) === rel ? "" : rel.slice(0, Math.max(0, offset - 1)),
             highlights: positions.filter((p) => p >= offset).map((p) => p - offset),
             run: () => void openFile(item),
@@ -213,6 +215,7 @@ function QuickPickInner({ request }: { request: QuickPickRequest }) {
                   accept(index);
                 }}
               >
+                {item.fileIcon && <FileIcon name={item.fileIcon} />}
                 <span className="label">
                   <Highlighted text={item.label} positions={item.highlights} />
                 </span>

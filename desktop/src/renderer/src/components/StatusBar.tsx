@@ -1,21 +1,57 @@
 import {
   ArrowDown,
   ArrowUp,
+  Check,
   CircleArrowDown,
   CircleX,
   GitBranch,
+  LoaderCircle,
   RefreshCw,
   TriangleAlert,
 } from "lucide-react";
+import { lastSaveError, saveTab } from "../actions/editor";
 import { pickBranch, sync } from "../actions/git";
+import { languageName, pickLanguageMode } from "../actions/language";
+import { updateSettings } from "../actions/misc";
 import { showPanel } from "../actions/terminal";
 import { installUpdate } from "../actions/update";
-import { monaco } from "../monaco/setup";
 import { useStore } from "../state/store";
 
-function languageName(id: string): string {
-  const info = monaco.languages.getLanguages().find((l) => l.id === id);
-  return info?.aliases?.[0] ?? id;
+/** "Saving…", "Saved", "Unsaved changes" or "Save failed" for the file in the editor. */
+function SaveStatus() {
+  const tab = useStore((s) => s.tabs.find((t) => t.id === s.activeTabId));
+  const dirty = useStore((s) => (s.activeTabId ? Boolean(s.dirty[s.activeTabId]) : false));
+  const state = useStore((s) => (s.activeTabId ? s.saveState[s.activeTabId] : undefined));
+  if (tab?.kind !== "file") return null;
+  if (state === "saving")
+    return (
+      <span className="status-item" data-testid="save-status">
+        <LoaderCircle size={12} className="spin" /> Saving…
+      </span>
+    );
+  if (state === "failed" && dirty)
+    return (
+      <button
+        className="status-item status-error"
+        data-testid="save-status"
+        title={`${lastSaveError(tab.id) ?? "The file could not be saved."} Click to try again.`}
+        onClick={() => void saveTab(tab.id)}
+      >
+        <CircleX size={12} /> Save failed
+      </button>
+    );
+  if (dirty)
+    return (
+      <span className="status-item" data-testid="save-status" title="This file has unsaved changes">
+        ● Unsaved
+      </span>
+    );
+  if (!tab.path) return null;
+  return (
+    <span className="status-item" data-testid="save-status" title="All changes are saved to disk">
+      <Check size={12} /> Saved
+    </span>
+  );
 }
 
 export function StatusBar() {
@@ -77,10 +113,33 @@ export function StatusBar() {
           </span>
           <span className="status-item">{status.bom ? "UTF-8 with BOM" : "UTF-8"}</span>
           <span className="status-item">{status.eol}</span>
-          <span className="status-item">{languageName(status.language)}</span>
+          <button
+            className="status-item"
+            title="Change Language Mode"
+            data-testid="language-status"
+            onClick={pickLanguageMode}
+          >
+            {languageName(status.language)}
+          </button>
         </>
       )}
-      {autoSave === "afterDelay" && <span className="status-item">Auto Save</span>}
+      <SaveStatus />
+      <button
+        className="status-item"
+        data-testid="autosave-toggle"
+        title={
+          autoSave === "afterDelay"
+            ? "Auto Save is on: files are saved shortly after you stop typing. Click to turn it off."
+            : "Auto Save is off. Click to turn it on."
+        }
+        onClick={() =>
+          void updateSettings({
+            "files.autoSave": autoSave === "afterDelay" ? "off" : "afterDelay",
+          })
+        }
+      >
+        Auto Save: {autoSave === "afterDelay" ? "On" : "Off"}
+      </button>
       {update?.state === "downloading" && (
         <span className="status-item" title={`Downloading CodeForge ${update.version}`}>
           <CircleArrowDown size={13} />

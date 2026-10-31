@@ -11,7 +11,7 @@ import { QuickPick } from "./components/QuickPick";
 import { Sash } from "./components/Sash";
 import { Sidebar } from "./components/Sidebar";
 import { StatusBar } from "./components/StatusBar";
-import { TitleBar } from "./components/TitleBar";
+import { menuForMnemonic, TitleBar } from "./components/TitleBar";
 import { Toasts } from "./components/Toasts";
 import { allEntries } from "./monaco/models";
 import { monaco } from "./monaco/setup";
@@ -64,6 +64,8 @@ function watchMarkers(): monaco.IDisposable {
         path,
         line: marker.startLineNumber,
         column: marker.startColumn,
+        endLine: marker.endLineNumber,
+        endColumn: marker.endColumn,
         message: marker.message,
         severity: level,
         source: marker.source,
@@ -92,6 +94,14 @@ export function App() {
     // Workbench shortcuts are handled in the capture phase so they work
     // everywhere (editor, terminal, inputs). Editing keys stay with Monaco.
     const onKeyDown = (event: KeyboardEvent) => {
+      // Alt+F, Alt+E, ... open the title-bar menus.
+      const menu = menuForMnemonic(event);
+      if (menu !== null) {
+        event.preventDefault();
+        event.stopPropagation();
+        setState({ openMenu: menu, contextMenu: null });
+        return;
+      }
       const command = commandForEvent(event);
       if (!command) return;
       event.preventDefault();

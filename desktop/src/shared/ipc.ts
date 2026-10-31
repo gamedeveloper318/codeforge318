@@ -1,4 +1,5 @@
 import type { GitChange } from "./git-status";
+import type { RunMode } from "./run-plan";
 import type { Settings } from "./settings";
 
 /**
@@ -135,7 +136,35 @@ export interface TerminalSession {
   cwd: string;
   pid: number;
   title: string;
+  /** "PowerShell", "Command Prompt", ... or "Program" for Run / Start Debugging. */
+  profile: string;
 }
+
+/** A shell installed on this computer that terminals can start. */
+export interface TerminalProfile {
+  id: string;
+  name: string;
+  /** How the shell quotes arguments. */
+  kind: "powershell" | "cmd" | "posix";
+}
+
+/** Whether a file can be run (or debugged) right now, and with what. */
+export type RunCheck =
+  | {
+      ok: true;
+      /** E.g. "Python 3.12.4" or "Python debugger (pdb)". */
+      description: string;
+      /** The command line that will start, for display. */
+      command: string;
+      debugHelp?: string;
+    }
+  | {
+      ok: false;
+      reason: string;
+      /** Where to download the missing runtime. */
+      installUrl?: string;
+      runtimeLabel?: string;
+    };
 
 /** State of the automatic updater, shown in the status bar and notifications. */
 export interface UpdateStatus {
@@ -166,6 +195,8 @@ export interface InvokeChannels {
   "app:toggle-devtools": { args: []; result: void };
   "app:confirm": { args: [options: ConfirmOptions]; result: number };
   "app:reveal": { args: [path: string]; result: void };
+  /** File > Exit: closes the window through the usual unsaved-changes check. */
+  "app:quit": { args: []; result: void };
   "window:confirm-close": { args: []; result: void };
   "workspace:open-dialog": { args: []; result: WorkspaceInfo | null };
   "workspace:open-recent": { args: [path: string]; result: WorkspaceInfo };
@@ -202,10 +233,19 @@ export interface InvokeChannels {
   "git:log": { args: [limit: number]; result: GitCommit[] };
   "git:sync": { args: [action: "pull" | "push" | "fetch"]; result: string };
   "terminal:create": {
-    args: [options: { cols: number; rows: number; cwd?: string }];
+    args: [options: { cols: number; rows: number; cwd?: string; profile?: string }];
     result: TerminalSession;
   };
   "terminal:kill": { args: [id: number]; result: void };
+  "terminal:profiles": {
+    args: [];
+    result: { profiles: TerminalProfile[]; defaultId: string };
+  };
+  "run:check": { args: [file: string, mode: RunMode]; result: RunCheck };
+  "run:start": {
+    args: [options: { file: string; mode: RunMode; cols: number; rows: number }];
+    result: TerminalSession;
+  };
   "settings:get": { args: []; result: Settings };
   "settings:update": { args: [patch: Partial<Settings>]; result: Settings };
   "settings:reset": { args: []; result: Settings };
@@ -250,6 +290,7 @@ export const INVOKE_CHANNELS: readonly InvokeChannel[] = [
   "app:toggle-devtools",
   "app:confirm",
   "app:reveal",
+  "app:quit",
   "window:confirm-close",
   "workspace:open-dialog",
   "workspace:open-recent",
@@ -284,6 +325,9 @@ export const INVOKE_CHANNELS: readonly InvokeChannel[] = [
   "git:sync",
   "terminal:create",
   "terminal:kill",
+  "terminal:profiles",
+  "run:check",
+  "run:start",
   "settings:get",
   "settings:update",
   "settings:reset",

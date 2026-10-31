@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fuzzyFilter, fuzzyMatch } from "@shared/fuzzy";
 import { changeBadge, parseGitStatus } from "@shared/git-status";
 import { GlobSet, globToRegExp, splitPatterns } from "@shared/glob";
-import { languageForPath, runCommandForPath } from "@shared/languages";
+import { languageForPath } from "@shared/languages";
 import {
   DEFAULT_SETTINGS,
   mergeSettings,
@@ -15,7 +15,9 @@ describe("settings", () => {
   it("fills every key with a default", () => {
     expect(DEFAULT_SETTINGS["editor.fontSize"]).toBe(14);
     expect(DEFAULT_SETTINGS["workbench.colorTheme"]).toBe("codeforge-dark");
-    expect(DEFAULT_SETTINGS["files.autoSave"]).toBe("off");
+    // Auto Save is on by default (since 0.4.0), one second after typing stops.
+    expect(DEFAULT_SETTINGS["files.autoSave"]).toBe("afterDelay");
+    expect(DEFAULT_SETTINGS["files.autoSaveDelay"]).toBe(1000);
   });
 
   it("replaces invalid values with defaults instead of failing", () => {
@@ -63,13 +65,6 @@ describe("languageForPath", () => {
     ["archive.unknownext", "plaintext"],
   ])("%s -> %s", (file, language) => {
     expect(languageForPath(file)).toBe(language);
-  });
-
-  it("knows how to run common scripts", () => {
-    expect(runCommandForPath("a.js")?.program).toBe("node");
-    expect(runCommandForPath("a.py")?.program).toBe("python");
-    expect(runCommandForPath("types.d.ts")).toBeNull();
-    expect(runCommandForPath("notes.md")).toBeNull();
   });
 });
 

@@ -1,13 +1,13 @@
-import { Eye, Globe, Play, RefreshCw, SquareTerminal } from "lucide-react";
+import { Bug, Eye, Globe, Play, RefreshCw, Square, SquareTerminal } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { runCommandForPath } from "@shared/languages";
+import { planRun, RUNTIMES } from "@shared/run-plan";
 import {
   previewActiveHtml,
   promptLocalhostPreview,
   readPackageScripts,
-  runActiveFile,
   runScript,
 } from "../../actions/misc";
+import { runActiveFile, startDebugging, stopRunningProgram } from "../../actions/run";
 import { createTerminal } from "../../actions/terminal";
 import { basename } from "../../lib/paths";
 import { useStore } from "../../state/store";
@@ -16,8 +16,10 @@ export function RunView() {
   const workspace = useStore((s) => s.workspace);
   const activeFile = useStore((s) => {
     const tab = s.tabs.find((t) => t.id === s.activeTabId);
-    return tab?.kind === "file" ? tab.path : null;
+    return tab?.kind === "file" ? (tab.path ?? tab.title) : null;
   });
+  const terminals = useStore((s) => s.terminals);
+  const running = terminals.filter((t) => t.purpose && !t.exited);
   const [scripts, setScripts] = useState<Record<string, string> | null>(null);
 
   const loadScripts = useCallback(() => {
@@ -25,44 +27,50 @@ export function RunView() {
   }, []);
   useEffect(loadScripts, [loadScripts, workspace]);
 
-  const runner = activeFile ? runCommandForPath(activeFile) : null;
+  const run = activeFile ? planRun(activeFile, "run") : null;
+  const debug = activeFile ? planRun(activeFile, "debug") : null;
   const isHtml = activeFile ? /\.html?$/i.test(activeFile) : false;
 
   return (
     <>
       <div className="view-header">
-        <span className="title">Run</span>
+        <span className="title">Run and Debug</span>
         <div className="actions">
           <button className="icon-button" title="Reload package.json scripts" onClick={loadScripts}>
             <RefreshCw size={14} />
           </button>
         </div>
       </div>
-      <div className="view-body">
+      <div className="view-body" data-testid="run-view">
         <div className="run-section">
           <h3>Active file</h3>
-          {activeFile ? (
-            runner ? (
-              <>
-                <span>
-                  Runs <code>{`${runner.program} "${basename(activeFile)}"`}</code> in a new
-                  terminal using {runner.label}. The tool must be installed on your computer.
-                </span>
-                <button className="btn" onClick={() => void runActiveFile()}>
-                  <Play size={14} /> Run {basename(activeFile)}
-                </button>
-              </>
-            ) : (
+          {!activeFile && <span>Open a file to run or debug it.</span>}
+          {activeFile && run?.ok && (
+            <>
               <span>
-                {basename(activeFile)} has no run command. Use the terminal to build or run it.
+                Runs <b>{basename(activeFile)}</b> with {RUNTIMES[run.plan.runtime].label} in a new
+                terminal. {RUNTIMES[run.plan.runtime].label} must be installed on this computer;
+                CodeForge checks first and tells you what to install if it's missing.
               </span>
-            )
-          ) : (
-            <span>Open a file to run it.</span>
+              <button className="btn" onClick={() => void runActiveFile()}>
+                <Play size={14} /> Run {basename(activeFile)}
+              </button>
+            </>
+          )}
+          {activeFile && run && !run.ok && !isHtml && <span>{run.reason}</span>}
+          {activeFile && debug?.ok && (
+            <button className="btn secondary" onClick={() => void startDebugging()}>
+              <Bug size={14} /> Start Debugging ({debug.plan.description})
+            </button>
           )}
           {isHtml && (
             <button className="btn secondary" onClick={() => void previewActiveHtml()}>
               <Eye size={14} /> Preview {basename(activeFile!)}
+            </button>
+          )}
+          {running.length > 0 && (
+            <button className="btn secondary" onClick={() => void stopRunningProgram()}>
+              <Square size={13} /> Stop {running.at(-1)!.title.replace(/^(Run|Debug): /, "")}
             </button>
           )}
         </div>
@@ -108,9 +116,10 @@ export function RunView() {
 
         <div className="run-section">
           <div className="notice">
-            Breakpoint debugging is not available in this version of CodeForge. Use the integrated
-            terminal with your language's debugger (for example <code>node --inspect</code> or{" "}
-            <code>python -m pdb</code>) in the meantime.
+            Start Debugging (F5) opens the language's own debugger in the terminal: <code>pdb</code>{" "}
+            for Python and <code>node inspect</code> for JavaScript. Type <code>n</code> for the
+            next line, <code>c</code> to continue and <code>q</code> (pdb) or <code>.exit</code>{" "}
+            (node) to quit. Stop Running Program is Shift+F5.
           </div>
         </div>
       </div>

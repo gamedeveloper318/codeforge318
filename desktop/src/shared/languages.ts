@@ -146,21 +146,29 @@ export const LANGUAGE_INTELLIGENCE: Record<string, string> = {
   html: "Completion, tag matching, formatting",
 };
 
-/** A command that runs a single file of this language, if one is known. */
-export function runCommandForPath(filePath: string): { program: string; label: string } | null {
-  const lang = languageForPath(filePath);
-  const name = basename(filePath).toLowerCase();
-  if (lang === "javascript") return { program: "node", label: "Node.js" };
-  if (lang === "typescript" && !name.endsWith(".d.ts"))
-    return { program: "npx tsx", label: "tsx (via npx)" };
-  if (lang === "python") return { program: "python", label: "Python" };
-  if (lang === "powershell")
-    return { program: "powershell -ExecutionPolicy Bypass -File", label: "PowerShell" };
-  if (lang === "shell") return { program: "bash", label: "Bash" };
-  if (lang === "ruby") return { program: "ruby", label: "Ruby" };
-  if (lang === "php") return { program: "php", label: "PHP" };
-  if (lang === "go") return { program: "go run", label: "Go" };
-  if (lang === "lua") return { program: "lua", label: "Lua" };
-  if (lang === "dart") return { program: "dart run", label: "Dart" };
+/**
+ * Guesses the language of a file without a known extension from its first
+ * line (shebang, doctype, <?php, <?xml).
+ */
+export function detectLanguageFromContent(content: string): string | null {
+  const first = content.slice(0, 300).trimStart().split(/\r?\n/, 1)[0] ?? "";
+  if (first.startsWith("#!")) {
+    if (/\bpython[0-9.]*\b/.test(first)) return "python";
+    if (/\b(node|deno|bun)\b/.test(first)) return "javascript";
+    if (/\b(bash|sh|zsh|dash|ksh)\b/.test(first)) return "shell";
+    if (/\bruby\b/.test(first)) return "ruby";
+    if (/\bperl\b/.test(first)) return "perl";
+    if (/\bphp\b/.test(first)) return "php";
+    if (/\bpwsh\b/.test(first)) return "powershell";
+  }
+  if (/^<!doctype html/i.test(first) || /^<html[\s>]/i.test(first)) return "html";
+  if (/^<\?php/.test(first)) return "php";
+  if (/^<\?xml/.test(first)) return "xml";
   return null;
+}
+
+/** The language for a file: from its name, else (unknown extension) from its content. */
+export function languageForFile(filePath: string, content: string): string {
+  const byName = languageForPath(filePath);
+  return byName === "plaintext" ? (detectLanguageFromContent(content) ?? byName) : byName;
 }

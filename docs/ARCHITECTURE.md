@@ -22,7 +22,8 @@ Electron splits the app into processes with very different privileges:
 │ workspace.ts    the open folder, path guard, file watcher                                   │
 │ fs-service.ts   read / write / create / rename / trash                                      │
 │ search-service  project search          git-service   runs the user's git (execFile)        │
-│ terminal-service node-pty shells        preview.ts    sandboxed preview windows             │
+│ terminal-service node-pty shells+profiles preview.ts  sandboxed preview windows             │
+│ run-service     run/debug plans; runtime.ts finds python/node/... on PATH                   │
 │ update-service  electron-updater (GitHub Releases)    lsp-service  Pyright for Python       │
 │ app-state.ts    settings.json + state.json in %APPDATA%\CodeForge                           │
 └───────────────────────────────────────────────┬────────────────────────────────────────────┘
@@ -44,7 +45,13 @@ Key decisions:
 - **One Monaco editor, many models.** Each tab owns a text model; switching tabs swaps the model and restores the view state. Dirty state compares the model's version with the version at last save.
 - **Terminals.** `@lydell/node-pty` ships prebuilt N-API binaries, so no compiler is needed and the same binary works in Node (tests) and Electron. Output is batched every 5 ms. The binaries are unpacked from the asar archive (`asarUnpack` in `electron-builder.yml`).
 - **Git.** `git` is called with argument arrays (never a shell), `GIT_TERMINAL_PROMPT=0` so it never hangs, and `GIT_OPTIONAL_LOCKS=0` so status checks don't fight other Git tools.
-- **Close handshake.** Closing the window asks the UI first; the UI offers to save dirty files and then confirms.
+- **Close handshake.** Closing the window (or File > Exit, `app:quit`) asks the UI first; the UI offers to save dirty files and then confirms.
+- **Title-bar menus.** Dropdowns render through a React portal into `<body>` with `-webkit-app-region: no-drag`. Inside the title bar's drag region, Windows treated real clicks on menu items as window drags (v0.3.0: every item). `tests/e2e/menus.spec.ts` checks every item with `WM_NCHITTEST` (`tests/e2e/win32-hit-test.ps1`).
+- **Run & debug.** The renderer only names a file and a mode (`run:check`, `run:start`). `shared/run-plan.ts` picks the program and arguments from the file's language (debug: `python -m pdb`, `node inspect`), `main/runtime.ts` locates the runtime on PATH (skipping the Microsoft Store python stub), and `TerminalService.createProgram` starts it directly in a pseudo-terminal, so the terminal shows the exit code and Stop can tell whether it is still running.
+- **Terminal profiles.** `detectProfiles()` lists the shells present on this computer; `terminal:create` accepts only a profile id, never an executable path.
+- **Auto Save.** `shared/autosave.ts` (pure, unit-tested) debounces per file, never writes the same file twice at once, skips unchanged and untitled files, and after a failure waits for the next edit; `actions/editor.ts` performs the writes without prompts.
+- **Highlighting and checks.** Monaco's Monarch tokenizers color keywords/strings/comments; `monaco/semantic-highlighting.ts` adds semantic tokens (functions, methods, classes, parameters, properties) computed from Monaco's tokens, after waiting for the lazily loaded tokenizer. `diagnostics/custom-diagnostics.ts` publishes markers from `shared/language-mismatch.ts` and `shared/html-structure.ts` (both on top of `shared/html-scan.ts`).
+- **IntelliSense.** `monaco/project-intellisense.ts` gives the TS/JS worker every project source file as extra libs (open files are served from their models). `monaco/language-completions.ts` adds keyword/snippet completion for languages without a language service. The Pyright bridge gives completion items without a range the range of the typed word, so Monaco ranks matches correctly.
 - **Python IntelliSense.** Monaco 0.57's built-in LSP client (`monaco.lsp.MonacoLspClient`) talks to Pyright through a worker-shaped port (`renderer/src/lsp/python.ts`) over IPC. `lsp-service.ts` runs Pyright with Electron's Node (`ELECTRON_RUN_AS_NODE`), frames messages, and its `LspBridge` only forwards Python files saved on disk, scopes the server's features to Python, tells the server which folder is open, answers server requests the editor doesn't implement, and replays open documents after a crash restart. The server starts the first time a Python file is opened.
 - **Automatic updates.** `update-service.ts` wraps electron-updater: background download, `update:status` events to the UI, install on "Restart Now" (after the unsaved-changes prompt) or on quit. The GitHub provider is configured in `electron-builder.yml`; the release workflow uploads `latest.yml` and the blockmap that installed copies read.
 
